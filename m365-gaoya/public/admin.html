@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft 365 - Admin Console</title>
+    <style>
+        /* ==========================================================================
+         * 1. 核心变量配置 (完全对齐原版 index.html)
+         * ========================================================================== */
+        :root { 
+            --brand-red: #F25022; --brand-green: #7FBA00; --brand-blue: #00A4EF; --brand-yellow: #FFB900; 
+            --theme-primary: #005a9e; --theme-success: #107c10; --theme-error: #c50f1f; 
+            --color-text-main: #242424; --color-text-sub: #616161; --color-border: #e1dfdd; 
+            --color-bg-app: #f0f2f5; --color-surface: rgba(255, 255, 255, 0.94); 
+            --radius-card: 24px; --radius-input: 12px; --radius-btn: 12px; --input-height: 56px; 
+            
+            /* 阻尼动画曲线 */
+            --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
+            --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
+            --ease-fluent: cubic-bezier(0.1, 0.9, 0.2, 1); 
+            --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
+
+            --shadow-card: 0 32px 64px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04); 
+            --shadow-input-focus: 0 4px 12px rgba(0, 90, 158, 0.15); 
+            --backdrop-blur: blur(30px) saturate(180%); 
+        }
+
+        *, *::before, *::after { box-sizing: border-box; outline: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100dvh; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; background-color: var(--color-bg-app); background-image: radial-gradient(at 0% 0%, rgba(0, 164, 239, 0.1) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(127, 186, 0, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(242, 80, 34, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(255, 185, 0, 0.08) 0px, transparent 50%); overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        .canvas-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #particle-canvas { z-index: 0; opacity: 0.6; }
+
+        /* 卡片宽度 460px (完全对齐原版) */
+        .app-shell { position: relative; z-index: 10; width: 92%; max-width: 460px; height: auto; max-height: 92dvh; background: var(--color-surface); backdrop-filter: var(--backdrop-blur); -webkit-backdrop-filter: var(--backdrop-blur); border: 1px solid rgba(255,255,255,0.8); border-radius: var(--radius-card); box-shadow: var(--shadow-card); display: flex; flex-direction: column; animation: shell-entrance 0.8s var(--ease-fluent); }
+        @keyframes shell-entrance { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .app-content { flex: 1; overflow-y: auto; padding: 40px 32px 30px 32px; scrollbar-width: none; }
+        .app-content::-webkit-scrollbar { display: none; }
+        
+        .app-footer { flex-shrink: 0; padding: 16px 24px; background: rgba(250, 250, 250, 0.8); border-top: 1px solid rgba(0,0,0,0.05); border-radius: 0 0 var(--radius-card) var(--radius-card); display: flex; justify-content: space-between; align-items: center; }
+
+        /* ==========================================================================
+         * 2. Logo 阻尼动画 (完全移植原版 index.html CSS)
+         * ========================================================================== */
+        .header-group { text-align: center; margin-bottom: 32px; }
+        .logo-trigger { width: 50px; height: 50px; margin: 0 auto 16px; position: relative; cursor: pointer; }
+        /* 恢复原版 hover 旋转 */
+        @keyframes hover-spin-infinite { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .logo-trigger:hover { animation: hover-spin-infinite 2s linear infinite; }
+
+        .rotator { width: 100%; height: 100%; animation: damping-spin 12s infinite; }
+        @keyframes damping-spin {
+            0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); }
+            70% { transform: rotate(2160deg); }
+            100% { transform: rotate(2160deg); }
+        }
+
+        .logo-grid { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; animation: damping-gap 12s infinite; }
+        @keyframes damping-gap {
+            0% { gap: 4px; animation-timing-function: var(--ease-breath); }
+            12% { gap: 12px; }
+            58% { gap: 12px; animation-timing-function: var(--ease-breath); }
+            70% { gap: 4px; }
+            100% { gap: 4px; }
+        }
+
+        /* 色块形态：方块 -> 圆球(scale 0.85) -> 恢复方块 */
+        .tile { width: 100%; height: 100%; border-radius: 0px; animation: damping-morph 12s infinite; }
+        @keyframes damping-morph {
+            0% { border-radius: 0px; transform: scale(1); animation-timing-function: var(--ease-breath); }
+            12% { border-radius: 50%; transform: scale(0.85); } 
+            58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); }
+            70% { border-radius: 0px; transform: scale(1); }
+            100% { border-radius: 0px; transform: scale(1); }
+        }
+        .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
+
+        h1 { margin: 0; color: var(--color-text-main); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
+
+        .form-row { margin-bottom: 24px; position: relative; }
+        .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 8px; margin-left: 4px; text-transform: uppercase; }
+        
+        .input-box { display: flex; align-items: center; position: relative; height: var(--input-height); background: #f7f7f7; border: 1px solid var(--color-border); border-radius: var(--radius-input); transition: all 0.2s ease; }
+        .input-box:focus-within { border-color: var(--theme-primary); box-shadow: var(--shadow-input-focus); transform: translateY(-1px); background: #ffffff; }
+        
+        input { width: 100%; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 15px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
+        
+        .btn-primary { width: 100%; height: 58px; margin-top: 10px; background: var(--theme-primary); color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s var(--ease-fluent); display: flex; justify-content: center; align-items: center; box-shadow: 0 8px 20px rgba(0,90,158,0.25); }
+        .btn-primary:hover { transform: translateY(-2px); background: #004a82; }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-danger { background: transparent; color: var(--theme-error); border: 1px solid rgba(197, 15, 31, 0.2); box-shadow: none; margin-top: 16px; height: 48px; }
+        .btn-danger:hover { background: rgba(197, 15, 31, 0.05); box-shadow: none; }
+
+        /* 视图切换 */
+        #view-dashboard { display: none; animation: fade-in 0.4s; }
+        @keyframes fade-in { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+        .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10000; pointer-events: none; }
+        .toast-msg { background: rgba(30, 30, 30, 0.9); color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(20px); transition: all 0.4s var(--ease-bounce); }
+        .toast-msg.show { opacity: 1; transform: translateY(0); }
+        
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; display: inline-block; margin-right: 6px; }
+        .status-dot.active { background: var(--theme-success); box-shadow: 0 0 6px var(--theme-success); }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas" class="canvas-layer"></canvas>
+    <div class="toast-container" id="toast-queue"></div>
+
+    <div class="app-shell">
+        <div class="app-content">
+            <div class="header-group">
+                <div class="logo-trigger" onclick="location.reload()">
+                    <div class="rotator"><div class="logo-grid"><div class="tile t-r"></div><div class="tile t-g"></div><div class="tile t-b"></div><div class="tile t-y"></div></div></div>
+                </div>
+                <h1 id="page-title">Admin Console</h1>
+                <div class="subtitle" id="page-subtitle">Sign in to manage system settings</div>
+            </div>
+
+            <div id="view-login">
+                <div class="form-row">
+                    <label class="label">Admin Username</label>
+                    <div class="input-box">
+                        <input type="text" id="in-user" placeholder="Username" autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label">Admin Password</label>
+                    <div class="input-box">
+                        <input type="password" id="in-pass" placeholder="Password">
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="Admin.login()">Sign In</button>
+            </div>
+
+            <div id="view-dashboard">
+                <div class="form-row">
+                    <label class="label" style="color:var(--brand-yellow)">Current Access Token (Invite Code)</label>
+                    <div class="input-box" style="border-color: var(--brand-yellow);">
+                        <input type="text" id="in-invite" placeholder="Loading...">
+                    </div>
+                    <div style="font-size: 11px; color: #888; margin-top: 8px; margin-left: 4px;">
+                        Update this code to immediately invalidate the old one. Users must use the new code to register.
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="Admin.saveConfig()">Update Access Token</button>
+                <button class="btn-primary btn-danger" onclick="Admin.logout()">Sign Out</button>
+            </div>
+
+        </div>
+
+        <div class="app-footer">
+            <div style="font-size: 11px; font-weight: 600; color: #888;">
+                <span class="status-dot" id="auth-status"></span><span id="auth-text">Not Authenticated</span>
+            </div>
+            <div style="font-size: 11px; font-weight: 600; color: var(--theme-primary); cursor: pointer;" onclick="window.location.href='/'">Go to User Portal</div>
+        </div>
+    </div>
+
+<script>
+const Admin = {
+    init() {
+        this.Visuals.Particles.run();
+        this.checkAuth();
+    },
+
+    checkAuth() {
+        const token = localStorage.getItem('adminToken');
+        if (token) {
+            this.showDashboard();
+            this.loadConfig();
+        } else {
+            this.showLogin();
+        }
+    },
+
+    showLogin() {
+        document.getElementById('view-dashboard').style.display = 'none';
+        document.getElementById('view-login').style.display = 'block';
+        document.getElementById('page-title').innerText = "Admin Console";
+        document.getElementById('page-subtitle').innerText = "Sign in to manage system settings";
+        document.getElementById('auth-status').classList.remove('active');
+        document.getElementById('auth-text').innerText = "Not Authenticated";
+    },
+
+    showDashboard() {
+        document.getElementById('view-login').style.display = 'none';
+        document.getElementById('view-dashboard').style.display = 'block';
+        document.getElementById('page-title').innerText = "System Dashboard";
+        document.getElementById('page-subtitle').innerText = "Security & Configuration";
+        document.getElementById('auth-status').classList.add('active');
+        document.getElementById('auth-text').innerText = "Authenticated";
+    },
+
+    async login() {
+        const u = document.getElementById('in-user').value.trim();
+        const p = document.getElementById('in-pass').value.trim();
+        if(!u || !p) return this.UI.toast("Please enter credentials");
+
+        try {
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                localStorage.setItem('adminToken', data.token);
+                this.UI.toast("Login Successful");
+                this.showDashboard();
+                this.loadConfig();
+            } else {
+                this.UI.toast(data.msg);
+            }
+        } catch(e) {
+            this.UI.toast("Network error");
+        }
+    },
+
+    logout() {
+        localStorage.removeItem('adminToken');
+        document.getElementById('in-user').value = '';
+        document.getElementById('in-pass').value = '';
+        this.showLogin();
+        this.UI.toast("Signed out successfully");
+    },
+
+    async loadConfig() {
+        try {
+            const res = await fetch('/api/admin/config', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('in-invite').value = data.inviteCode;
+            } else {
+                this.logout(); // Token 失效自动退出
+            }
+        } catch(e) {
+            this.UI.toast("Failed to load config");
+        }
+    },
+
+    async saveConfig() {
+        const newCode = document.getElementById('in-invite').value.trim();
+        if(!newCode) return this.UI.toast("Code cannot be empty");
+
+        try {
+            const res = await fetch('/api/admin/config', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('adminToken')}` 
+                },
+                body: JSON.stringify({ inviteCode: newCode })
+            });
+            const data = await res.json();
+            this.UI.toast(data.msg);
+        } catch(e) {
+            this.UI.toast("Failed to update config");
+        }
+    },
+
+    UI: {
+        toast(msg) {
+            const box = document.getElementById('toast-queue');
+            const el = document.createElement('div');
+            el.className = 'toast-msg'; el.innerText = msg;
+            box.appendChild(el);
+            setTimeout(() => el.classList.add('show'), 10);
+            setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3000);
+        }
+    },
+
+    // ==========================================
+    // --- 动效核心 (完全移植原版 index.html JS) ---
+    // ==========================================
+    Visuals: {
+        Particles: { 
+            run() { 
+                const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
+                const resize = () => { w=cvs.width=window.innerWidth; h=cvs.height=window.innerHeight; }; window.addEventListener('resize', resize); resize();
+                // 恢复原版鼠标互动
+                window.addEventListener('mousemove', (e) => { mouse.x=e.x; mouse.y=e.y; }); window.addEventListener('mouseleave', () => { mouse.x=null; mouse.y=null; });
+                // 恢复原版 45 个粒子
+                for(let i=0; i<45; i++) p.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-.5)*0.5, vy: (Math.random()-.5)*0.5 });
+                const animate = () => { ctx.clearRect(0,0,w,h); ctx.fillStyle = 'rgba(100,100,100,0.5)'; p.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0 || n.x>w) n.vx *= -1; if(n.y<0 || n.y>h) n.vy *= -1; if(mouse.x != null) { let dx = mouse.x - n.x; let dy = mouse.y - n.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 100) { const force = (100 - dist) / 100; n.x -= (dx / dist) * force * 2; n.y -= (dy / dist) * force * 2; } } ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(animate); }; animate();
+            } 
+        }
+    }
+};
+window.addEventListener('DOMContentLoaded', () => Admin.init());
+</script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft 365 - System Setup</title>
+    <style>
+        /* ==========================================================================
+         * 1. 核心变量配置 (完全对齐原版 index.html)
+         * ========================================================================== */
+        :root { 
+            --brand-red: #F25022; --brand-green: #7FBA00; --brand-blue: #00A4EF; --brand-yellow: #FFB900; 
+            --theme-primary: #005a9e; --theme-success: #107c10; --theme-error: #c50f1f; 
+            --color-text-main: #242424; --color-text-sub: #616161; --color-border: #e1dfdd; 
+            --color-bg-app: #f0f2f5; --color-surface: rgba(255, 255, 255, 0.94); 
+            --radius-card: 24px; --radius-input: 12px; --radius-btn: 12px; --input-height: 56px; 
+            
+            /* 阻尼动画曲线 */
+            --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
+            --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
+            --ease-fluent: cubic-bezier(0.1, 0.9, 0.2, 1); 
+            --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
+
+            --shadow-card: 0 32px 64px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04); 
+            --shadow-input-focus: 0 4px 12px rgba(0, 90, 158, 0.15); 
+            --backdrop-blur: blur(30px) saturate(180%); 
+        }
+
+        *, *::before, *::after { box-sizing: border-box; outline: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100dvh; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; background-color: var(--color-bg-app); background-image: radial-gradient(at 0% 0%, rgba(0, 164, 239, 0.1) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(127, 186, 0, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(242, 80, 34, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(255, 185, 0, 0.08) 0px, transparent 50%); overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        .canvas-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #particle-canvas { z-index: 0; opacity: 0.6; }
+        #confetti-canvas { z-index: 1000; }
+
+        /* 卡片稍微加宽一点（500px），适应 TenantID 等长 Token */
+        .app-shell { position: relative; z-index: 10; width: 92%; max-width: 500px; height: auto; max-height: 92dvh; background: var(--color-surface); backdrop-filter: var(--backdrop-blur); -webkit-backdrop-filter: var(--backdrop-blur); border: 1px solid rgba(255,255,255,0.8); border-radius: var(--radius-card); box-shadow: var(--shadow-card); display: flex; flex-direction: column; animation: shell-entrance 0.8s var(--ease-fluent); }
+        @keyframes shell-entrance { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .app-content { flex: 1; overflow-y: auto; padding: 40px 32px 20px 32px; scrollbar-width: none; }
+        .app-content::-webkit-scrollbar { display: none; }
+        
+        .app-footer { flex-shrink: 0; padding: 16px 24px; background: rgba(250, 250, 250, 0.8); border-top: 1px solid rgba(0,0,0,0.05); border-radius: 0 0 var(--radius-card) var(--radius-card); display: flex; justify-content: space-between; align-items: center; }
+
+        /* ==========================================================================
+         * 2. Logo 阻尼动画 (完全移植原版 index.html CSS)
+         * ========================================================================== */
+        .header-group { text-align: center; margin-bottom: 24px; }
+        .logo-trigger { width: 50px; height: 50px; margin: 0 auto 16px; position: relative; }
+
+        .rotator { width: 100%; height: 100%; animation: damping-spin 12s infinite; }
+        @keyframes damping-spin {
+            0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); }
+            70% { transform: rotate(2160deg); }
+            100% { transform: rotate(2160deg); }
+        }
+
+        .logo-grid { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; animation: damping-gap 12s infinite; }
+        @keyframes damping-gap {
+            0% { gap: 4px; animation-timing-function: var(--ease-breath); }
+            12% { gap: 12px; }
+            58% { gap: 12px; animation-timing-function: var(--ease-breath); }
+            70% { gap: 4px; }
+            100% { gap: 4px; }
+        }
+
+        /* 色块形态：方块 -> 圆球(scale 0.85) -> 恢复方块 */
+        .tile { width: 100%; height: 100%; border-radius: 0px; animation: damping-morph 12s infinite; }
+        @keyframes damping-morph {
+            0% { border-radius: 0px; transform: scale(1); animation-timing-function: var(--ease-breath); }
+            12% { border-radius: 50%; transform: scale(0.85); } 
+            58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); }
+            70% { border-radius: 0px; transform: scale(1); }
+            100% { border-radius: 0px; transform: scale(1); }
+        }
+        .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
+
+        h1 { margin: 0; color: var(--color-text-main); font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
+
+        /* ==========================================================================
+         * 3. 表单组件样式 (完全对齐原版 UI)
+         * ========================================================================== */
+        .section-title { font-size: 11px; font-weight: 800; color: var(--theme-primary); text-transform: uppercase; letter-spacing: 0.5px; margin: 24px 0 12px 4px; border-bottom: 1px solid rgba(0,90,158,0.1); padding-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .section-title::before { content: ''; display: block; width: 4px; height: 12px; background: var(--theme-primary); border-radius: 2px; }
+        
+        .form-row { margin-bottom: 16px; position: relative; }
+        .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 6px; margin-left: 4px; }
+        
+        .input-box { display: flex; align-items: center; position: relative; height: var(--input-height); background: #f7f7f7; border: 1px solid var(--color-border); border-radius: var(--radius-input); transition: all 0.2s ease; }
+        .input-box:focus-within { border-color: var(--theme-primary); box-shadow: var(--shadow-input-focus); transform: translateY(-1px); background: #ffffff; }
+        .input-box.valid { border-color: var(--theme-success); background: #f8fff8; }
+        .input-box.valid::after { content: '✓'; position: absolute; right: 12px; color: var(--theme-success); font-weight: bold; }
+        
+        input { width: 100%; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 14px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
+        input::placeholder { color: #aaa; font-weight: 400; }
+        
+        .btn-primary { width: 100%; height: 58px; margin-top: 24px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; cursor: not-allowed; transition: all 0.3s var(--ease-fluent); display: flex; justify-content: center; align-items: center; opacity: 0.7; }
+        .btn-primary.ready { background: var(--theme-primary); box-shadow: 0 8px 20px rgba(0,90,158,0.25); cursor: pointer; opacity: 1; }
+        .btn-primary.ready:hover { transform: translateY(-2px); background: #004a82; }
+        .btn-primary.ready:active { transform: scale(0.98); }
+
+        #view-success { display: none; flex-direction: column; align-items: center; padding: 20px 0; animation: view-enter 0.5s; text-align: center; }
+        @keyframes view-enter { from { opacity: 0; } to { opacity: 1; } }
+        .success-icon { font-size: 56px; margin-bottom: 16px; animation: pop 0.6s var(--ease-bounce); }
+        @keyframes pop { 0%{transform:scale(0)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
+
+        .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10000; pointer-events: none; }
+        .toast-msg { background: rgba(30, 30, 30, 0.9); color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(20px); transition: all 0.4s var(--ease-bounce); }
+        .toast-msg.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas" class="canvas-layer"></canvas>
+    <canvas id="confetti-canvas" class="canvas-layer"></canvas>
+    <div class="toast-container" id="toast-queue"></div>
+
+    <div class="app-shell">
+        <div class="app-content">
+            <div class="header-group">
+                <div class="logo-trigger">
+                    <div class="rotator"><div class="logo-grid"><div class="tile t-r"></div><div class="tile t-g"></div><div class="tile t-b"></div><div class="tile t-y"></div></div></div>
+                </div>
+                <h1>System Initialization</h1>
+                <div class="subtitle">Securely configure your Microsoft 365 Environment</div>
+            </div>
+
+            <div id="view-form">
+                <div class="section-title">Admin Account</div>
+                <div class="form-row">
+                    <label class="label">Admin Username</label>
+                    <div class="input-box req-box" id="wrap-adminUser">
+                        <input type="text" id="in-adminUser" value="admin" placeholder="e.g. admin" autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label">Admin Password</label>
+                    <div class="input-box req-box" id="wrap-adminPass">
+                        <input type="password" id="in-adminPass" placeholder="Set a secure password">
+                    </div>
+                </div>
+
+                <div class="section-title">Microsoft 365 API Credentials</div>
+                <div class="form-row">
+                    <label class="label">Tenant ID</label>
+                    <div class="input-box req-box" id="wrap-tenantId">
+                        <input type="text" id="in-tenantId" placeholder="e.g. 7bc1e970-...">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label">Client ID (App ID)</label>
+                    <div class="input-box req-box" id="wrap-clientId">
+                        <input type="text" id="in-clientId" placeholder="e.g. e7d3d1a5-...">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label">Client Secret</label>
+                    <div class="input-box req-box" id="wrap-clientSecret">
+                        <input type="password" id="in-clientSecret" placeholder="Paste secret value here">
+                    </div>
+                </div>
+
+                <div class="section-title">Default Configuration</div>
+                <div class="form-row">
+                    <label class="label">License SKU ID (Optional)</label>
+                    <div class="input-box">
+                        <input type="text" id="in-skuId" value="6fd2c87f-b296-42f0-b197-1e91e994b900">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label" style="color:var(--brand-yellow)">System Access Token</label>
+                    <div class="input-box">
+                        <input type="text" id="in-inviteCode" value="schopenhauer" placeholder="For user registration">
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="btn-submit" onclick="System.Actions.process()">
+                    <span id="btn-txt">Save & Initialize</span>
+                </button>
+            </div>
+
+            <div id="view-success">
+                <div class="success-icon">🛡️</div>
+                <h2 style="color:var(--theme-primary); margin:0; font-size:22px;">System Secured</h2>
+                <p style="color:#666; font-size:14px; margin-top:8px; line-height: 1.5;">
+                    Your Microsoft 365 credentials have been safely saved.<br>The system is now ready for user provisioning.
+                </p>
+                <button class="btn-primary ready" style="margin-top: 30px;" onclick="window.location.href='/'">Go to User Portal</button>
+            </div>
+        </div>
+
+        <div class="app-footer">
+            <div style="font-size: 11px; font-weight: 600; color: #888;">First-Time Setup Mode</div>
+            <div style="font-size: 11px; font-weight: 600; color: var(--theme-primary);">Local Environment</div>
+        </div>
+    </div>
+
+<script>
+const System = {
+    init() {
+        this.Visuals.Particles.run();
+        this.Events.setup();
+    },
+    
+    Events: {
+        setup() {
+            // 实时校验必填项
+            const reqFields = ['adminUser', 'adminPass', 'tenantId', 'clientId', 'clientSecret'];
+            reqFields.forEach(key => {
+                const el = document.getElementById('in-' + key);
+                el.addEventListener('input', () => {
+                    const wrap = document.getElementById('wrap-' + key);
+                    if(el.value.trim().length > 0) {
+                        wrap.classList.add('valid');
+                    } else {
+                        wrap.classList.remove('valid');
+                    }
+                    this.checkForm();
+                });
+            });
+            // 页面加载触发一次校验
+            this.checkForm();
+        },
+        checkForm() {
+            const reqFields = ['adminUser', 'adminPass', 'tenantId', 'clientId', 'clientSecret'];
+            const isValid = reqFields.every(key => document.getElementById('in-' + key).value.trim().length > 0);
+            const btn = document.getElementById('btn-submit');
+            if(isValid) {
+                btn.classList.add('ready');
+                btn.removeAttribute('disabled');
+            } else {
+                btn.classList.remove('ready');
+                btn.setAttribute('disabled', 'true');
+            }
+        }
+    },
+
+    UI: {
+        toast(msg) {
+            const box = document.getElementById('toast-queue');
+            const el = document.createElement('div');
+            el.className = 'toast-msg'; el.innerText = msg;
+            box.appendChild(el);
+            setTimeout(() => el.classList.add('show'), 10);
+            setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 3000);
+        }
+    },
+
+    Actions: {
+        async process() {
+            const btn = document.getElementById('btn-submit');
+            if(!btn.classList.contains('ready')) return;
+            
+            btn.classList.remove('ready');
+            btn.innerHTML = 'Initializing...';
+            
+            const payload = {
+                adminUser: document.getElementById('in-adminUser').value.trim(),
+                adminPass: document.getElementById('in-adminPass').value.trim(),
+                tenantId: document.getElementById('in-tenantId').value.trim(),
+                clientId: document.getElementById('in-clientId').value.trim(),
+                clientSecret: document.getElementById('in-clientSecret').value.trim(),
+                skuId: document.getElementById('in-skuId').value.trim(),
+                inviteCode: document.getElementById('in-inviteCode').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/setup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    System.Visuals.Confetti.fire();
+                    document.getElementById('view-form').style.display = 'none';
+                    document.getElementById('view-success').style.display = 'flex';
+                } else {
+                    System.UI.toast(data.msg || "Setup failed");
+                    btn.classList.add('ready');
+                    btn.innerHTML = 'Save & Initialize';
+                }
+            } catch (e) {
+                System.UI.toast("Network Error. Is backend running?");
+                btn.classList.add('ready');
+                btn.innerHTML = 'Save & Initialize';
+            }
+        }
+    },
+
+    // ==========================================
+    // --- 动效核心 (完全移植原版 index.html JS) ---
+    // ==========================================
+    Visuals: {
+        Particles: { 
+            run() { 
+                const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
+                const resize = () => { w=cvs.width=window.innerWidth; h=cvs.height=window.innerHeight; }; window.addEventListener('resize', resize); resize();
+                // 恢复原版鼠标互动
+                window.addEventListener('mousemove', (e) => { mouse.x=e.x; mouse.y=e.y; }); window.addEventListener('mouseleave', () => { mouse.x=null; mouse.y=null; });
+                // 恢复原版 45 个粒子
+                for(let i=0; i<45; i++) p.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-.5)*0.5, vy: (Math.random()-.5)*0.5 });
+                const animate = () => { ctx.clearRect(0,0,w,h); ctx.fillStyle = 'rgba(100,100,100,0.5)'; p.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0 || n.x>w) n.vx *= -1; if(n.y<0 || n.y>h) n.vy *= -1; if(mouse.x != null) { let dx = mouse.x - n.x; let dy = mouse.y - n.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 100) { const force = (100 - dist) / 100; n.x -= (dx / dist) * force * 2; n.y -= (dy / dist) * force * 2; } } ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(animate); }; animate();
+            } 
+        },
+        Confetti: { 
+            fire() { 
+                const cvs = document.getElementById('confetti-canvas'); const ctx = cvs.getContext('2d'); cvs.width = window.innerWidth; cvs.height = window.innerHeight; const pieces = []; const colors = ['#F25022', '#7FBA00', '#00A4EF', '#FFB900'];
+                for(let i=0; i<200; i++) pieces.push({ x: cvs.width/2, y: cvs.height/2, w: Math.random()*8+4, h: Math.random()*8+4, c: colors[Math.floor(Math.random()*4)], vx: (Math.random()-.5)*20, vy: (Math.random()-.5)*20-5, age: 0 });
+                const render = () => { ctx.clearRect(0,0,cvs.width,cvs.height); let active = false; pieces.forEach(e => { if(e.age > 120) return; active = true; e.x += e.vx; e.y += e.vy; e.vy += 0.5; e.age++; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, e.w, e.h); }); if(active) requestAnimationFrame(render); else ctx.clearRect(0,0,cvs.width,cvs.height); }; render();
+            } 
+        }
+    }
+};
+window.addEventListener('DOMContentLoaded', () => System.init());
+</script>
+</body>
+</html>

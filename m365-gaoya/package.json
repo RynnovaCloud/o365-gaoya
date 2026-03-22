@@ -1,0 +1,14 @@
+{
+  "name": "microsoft-365-automation",
+  "version": "1.0.0",
+  "description": "Microsoft 365 Automation Account Allocation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.8",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}

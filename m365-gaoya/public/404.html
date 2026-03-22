@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>404 Not Found - Microsoft 365</title>
+    <style>
+        /* ==========================================================================
+         * 1. 核心变量配置 (完全对齐主页窄版)
+         * ========================================================================== */
+        :root { 
+            --brand-red: #F25022; --brand-green: #7FBA00; --brand-blue: #00A4EF; --brand-yellow: #FFB900; 
+            --theme-primary: #005a9e; --theme-success: #107c10; --theme-error: #c50f1f; 
+            --color-text-main: #242424; --color-text-sub: #616161; --color-border: #e1dfdd; 
+            --color-bg-app: #f0f2f5; --color-surface: rgba(255, 255, 255, 0.94); 
+            --radius-card: 24px; --radius-btn: 12px; 
+            
+            --ease-fluent: cubic-bezier(0.1, 0.9, 0.2, 1); 
+            --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
+            --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
+            --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
+
+            --shadow-card: 0 32px 64px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04); 
+            --backdrop-blur: blur(30px) saturate(180%); 
+        }
+
+        *, *::before, *::after { box-sizing: border-box; outline: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100dvh; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; background-color: var(--color-bg-app); background-image: radial-gradient(at 0% 0%, rgba(0, 164, 239, 0.1) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(127, 186, 0, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(242, 80, 34, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(255, 185, 0, 0.08) 0px, transparent 50%); overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        .canvas-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #particle-canvas { z-index: 0; opacity: 0.6; }
+
+        /* 统一的窄卡片 460px */
+        .app-shell { position: relative; z-index: 10; width: 92%; max-width: 460px; padding: 50px 32px 30px 32px; background: var(--color-surface); backdrop-filter: var(--backdrop-blur); -webkit-backdrop-filter: var(--backdrop-blur); border: 1px solid rgba(255,255,255,0.8); border-radius: var(--radius-card); box-shadow: var(--shadow-card); text-align: center; display: flex; flex-direction: column; align-items: center; animation: shell-entrance 0.8s var(--ease-fluent); }
+        @keyframes shell-entrance { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* ==========================================================================
+         * 2. Logo 阻尼动画
+         * ========================================================================== */
+        .logo-trigger { width: 56px; height: 56px; margin: 0 auto 24px; position: relative; cursor: pointer; }
+        @keyframes hover-spin-infinite { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .logo-trigger:hover { animation: hover-spin-infinite 2s linear infinite; }
+
+        .rotator { width: 100%; height: 100%; animation: damping-spin 12s infinite; }
+        @keyframes damping-spin { 0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); } 70%, 100% { transform: rotate(2160deg); } }
+        
+        .logo-grid { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; animation: damping-gap 12s infinite; }
+        @keyframes damping-gap { 0%, 58%, 100% { gap: 4px; animation-timing-function: var(--ease-breath); } 12% { gap: 12px; } }
+        
+        .tile { width: 100%; height: 100%; border-radius: 0px; animation: damping-morph 12s infinite; }
+        @keyframes damping-morph { 0%, 70%, 100% { border-radius: 0px; transform: scale(1); } 12%, 58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); } }
+        
+        .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
+
+        /* ==========================================================================
+         * 3. 文本与按钮样式
+         * ========================================================================== */
+        h1 { font-size: 72px; font-weight: 800; color: var(--color-text-main); margin: 0; letter-spacing: -3px; line-height: 1; }
+        h2 { font-size: 22px; font-weight: 600; color: var(--color-text-main); margin: 12px 0 16px 0; letter-spacing: -0.5px; }
+        p { font-size: 14px; color: var(--color-text-sub); margin-bottom: 32px; line-height: 1.5; width: 100%; }
+
+        .btn-primary { width: 100%; height: 54px; background: var(--theme-primary); color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s var(--ease-fluent); display: flex; justify-content: center; align-items: center; box-shadow: 0 8px 20px rgba(0,90,158,0.25); }
+        .btn-primary:hover { transform: translateY(-2px); background: #004a82; }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .footer { margin-top: 40px; font-size: 11px; font-weight: 600; color: #aaa; }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas" class="canvas-layer"></canvas>
+
+    <div class="app-shell">
+        <div class="logo-trigger">
+            <div class="rotator">
+                <div class="logo-grid">
+                    <div class="tile t-r"></div><div class="tile t-g"></div>
+                    <div class="tile t-b"></div><div class="tile t-y"></div>
+                </div>
+            </div>
+        </div>
+
+        <h1>404</h1>
+        <h2>Page not found.</h2>
+        <p>The link you followed may be broken, or the page may have been removed or renamed.</p>
+
+        <button class="btn-primary" onclick="window.location.href='/'">Go back home</button>
+
+        <div class="footer">
+            © 2026 刘宏鹏 | Microsoft 365 Automation
+        </div>
+    </div>
+
+<script>
+    const Visuals = {
+        Particles: { 
+            run() { 
+                const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
+                const resize = () => { w=cvs.width=window.innerWidth; h=cvs.height=window.innerHeight; }; window.addEventListener('resize', resize); resize();
+                window.addEventListener('mousemove', (e) => { mouse.x=e.x; mouse.y=e.y; }); window.addEventListener('mouseleave', () => { mouse.x=null; mouse.y=null; });
+                for(let i=0; i<45; i++) p.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-.5)*0.5, vy: (Math.random()-.5)*0.5 });
+                const animate = () => { ctx.clearRect(0,0,w,h); ctx.fillStyle = 'rgba(100,100,100,0.5)'; p.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0 || n.x>w) n.vx *= -1; if(n.y<0 || n.y>h) n.vy *= -1; if(mouse.x != null) { let dx = mouse.x - n.x; let dy = mouse.y - n.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 100) { const force = (100 - dist) / 100; n.x -= (dx / dist) * force * 2; n.y -= (dy / dist) * force * 2; } } ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(animate); }; animate();
+            } 
+        }
+    };
+    window.addEventListener('DOMContentLoaded', () => Visuals.Particles.run());
+</script>
+</body>
+</html>

@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TUV Management Console</title>
+    <style>
+        /* ==========================================================================
+         * 1. 核心变量配置
+         * ========================================================================== */
+        :root { 
+            --brand-red: #F25022; 
+            --brand-green: #7FBA00; 
+            --brand-blue: #00A4EF; 
+            --brand-yellow: #FFB900; 
+            --theme-primary: #005a9e; 
+            --theme-success: #107c10; 
+            --theme-error: #c50f1f; 
+            --color-text-main: #242424; 
+            --color-text-sub: #616161; 
+            --color-border: #e1dfdd; 
+            --color-bg-app: #f0f2f5; 
+            --color-surface: rgba(255, 255, 255, 0.94); 
+            --radius-card: 24px; 
+            --radius-input: 12px; 
+            --radius-btn: 12px; 
+            --input-height: 56px; 
+            
+            --ease-fluent: cubic-bezier(0.1, 0.9, 0.2, 1); 
+            --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
+            
+            /* Logo 专用动画曲线 */
+            --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
+            --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
+
+            --shadow-card: 0 32px 64px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04); 
+            --shadow-input-focus: 0 4px 12px rgba(0, 90, 158, 0.15); 
+            --backdrop-blur: blur(30px) saturate(180%); 
+        }
+
+        *, *::before, *::after { box-sizing: border-box; outline: none; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { width: 100%; height: 100dvh; font-family: "Segoe UI Variable Display", "Segoe UI", sans-serif; background-color: var(--color-bg-app); background-image: radial-gradient(at 0% 0%, rgba(0, 164, 239, 0.1) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(127, 186, 0, 0.08) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(242, 80, 34, 0.08) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(255, 185, 0, 0.08) 0px, transparent 50%); overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        
+        .canvas-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        #particle-canvas { z-index: 0; opacity: 0.6; }
+        #confetti-canvas { z-index: 1000; }
+
+        .app-shell { position: relative; z-index: 10; width: 92%; max-width: 460px; height: auto; max-height: 92dvh; background: var(--color-surface); backdrop-filter: var(--backdrop-blur); -webkit-backdrop-filter: var(--backdrop-blur); border: 1px solid rgba(255,255,255,0.8); border-radius: var(--radius-card); box-shadow: var(--shadow-card); display: flex; flex-direction: column; animation: shell-entrance 0.8s var(--ease-fluent); }
+        @keyframes shell-entrance { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .app-content { flex: 1; overflow-y: auto; padding: 40px 32px 20px 32px; scrollbar-width: none; }
+        .app-content::-webkit-scrollbar { display: none; }
+        
+        .app-footer { flex-shrink: 0; padding: 16px 24px; background: rgba(250, 250, 250, 0.8); border-top: 1px solid rgba(0,0,0,0.05); border-radius: 0 0 var(--radius-card) var(--radius-card); display: flex; justify-content: space-between; align-items: center; }
+
+        /* ==========================================================================
+         * 2. Logo 动画样式
+         * ========================================================================== */
+        .header-group { text-align: center; margin-bottom: 32px; }
+        
+        .logo-trigger { 
+            width: 50px; 
+            height: 50px; 
+            margin: 0 auto 16px; 
+            position: relative; 
+            cursor: pointer; 
+        }
+        @keyframes hover-spin-infinite { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .logo-trigger:hover { animation: hover-spin-infinite 2s linear infinite; }
+
+        .rotator { width: 100%; height: 100%; animation: damping-spin 12s infinite; }
+        @keyframes damping-spin {
+            0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); }
+            70% { transform: rotate(2160deg); }
+            100% { transform: rotate(2160deg); }
+        }
+
+        .logo-grid { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; animation: damping-gap 12s infinite; }
+        @keyframes damping-gap {
+            0% { gap: 4px; animation-timing-function: var(--ease-breath); }
+            12% { gap: 12px; }
+            58% { gap: 12px; animation-timing-function: var(--ease-breath); }
+            70% { gap: 4px; }
+            100% { gap: 4px; }
+        }
+
+        .tile { width: 100%; height: 100%; border-radius: 0px; animation: damping-morph 12s infinite; }
+        @keyframes damping-morph {
+            0% { border-radius: 0px; transform: scale(1); animation-timing-function: var(--ease-breath); }
+            12% { border-radius: 50%; transform: scale(0.85); } 
+            58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); }
+            70% { border-radius: 0px; transform: scale(1); }
+            100% { border-radius: 0px; transform: scale(1); }
+        }
+        
+        .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
+
+        /* ==========================================================================
+         * 3. 业务组件样式
+         * ========================================================================== */
+        h1 { margin: 0; height: 32px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+        .greeting-text { display: block; animation: text-cycle 2.5s infinite var(--ease-fluent); }
+        @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(10px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
+        
+        .form-row { margin-bottom: 24px; position: relative; }
+        .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 8px; margin-left: 4px; text-transform: uppercase; }
+        
+        .input-box { 
+            display: flex; 
+            align-items: center; 
+            position: relative; 
+            height: var(--input-height); 
+            background: #f7f7f7; 
+            border: 1px solid var(--color-border); 
+            border-radius: var(--radius-input); 
+            transition: all 0.2s ease; 
+        }
+        .input-box:focus-within { border-color: var(--theme-primary); box-shadow: var(--shadow-input-focus); transform: translateY(-1px); background: #ffffff; }
+        .input-box.valid { border-color: var(--theme-success); background: #f8fff8; }
+        .input-box.valid::after { content: '✓'; position: absolute; right: 12px; color: var(--theme-success); font-weight: bold; }
+        .input-box.invalid { border-color: var(--theme-error); background: #fffcfc; animation: shake 0.4s var(--ease-bounce); }
+        .input-box.invalid::after { content: '!'; position: absolute; right: 12px; color: var(--theme-error); font-weight: bold; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-4px)} 40%,80%{transform:translateX(4px)} }
+        
+        input { width: 100%; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 15px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
+        
+        .combo-box { display: flex; width: 100%; height: 100%; gap: 8px; }
+        .combo-input { flex: 1; min-width: 0; }
+        .combo-select { flex: 0 0 auto; max-width: 60%; position: relative; }
+        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #f9f9f9; border: 1px solid var(--color-border); border-radius: var(--radius-input); cursor: pointer; transition: 0.2s; }
+        .domain-btn:hover { background: #f0f0f0; border-color: #aaa; }
+        .domain-val { font-size: 13px; font-weight: 600; color: var(--theme-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .icon-chev { width: 10px; fill: #666; transition: 0.3s; flex-shrink: 0; }
+        .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
+        
+        .dropdown { position: absolute; top: calc(100% + 6px); right: 0; min-width: 100%; width: max-content; background: rgba(255,255,255,0.98); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); padding: 6px; z-index: 100; display: none; animation: fade-in-up 0.2s ease; }
+        @keyframes fade-in-up { from{opacity:0;transform:translateY(-5px)} to{opacity:1;transform:translateY(0)} }
+        .dd-item { padding: 10px 14px; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; color: #333; }
+        .dd-item:hover { background: #f5f5f5; }
+        .dd-item.selected { background: rgba(0,90,158,0.08); color: var(--theme-primary); font-weight: 700; }
+        
+        .error-hint { display: flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 4px; font-size: 11px; font-weight: 600; color: var(--theme-error); height: 0; opacity: 0; overflow: hidden; transition: all 0.3s ease; }
+        .error-hint.show { height: 20px; opacity: 1; margin-bottom: 4px; }
+        .error-hint svg { width: 12px; fill: currentColor; }
+        
+        .btn-primary { width: 100%; height: 58px; margin-top: 24px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; cursor: not-allowed; transition: all 0.3s var(--ease-fluent); display: flex; justify-content: center; align-items: center; gap: 8px; overflow: hidden; position: relative; opacity: 0.7; }
+        .btn-primary.ready { background: var(--theme-success); box-shadow: 0 8px 20px rgba(16,124,16,0.25); cursor: pointer; opacity: 1; }
+        .btn-primary.ready:hover { transform: translateY(-2px); background: #0e6f0e; }
+        .btn-primary.ready:active { transform: scale(0.98); }
+        .btn-primary:disabled { cursor: wait; opacity: 0.7; }
+        
+        #view-success { display: none; flex-direction: column; align-items: center; padding-top: 10px; animation: view-enter 0.5s; }
+        @keyframes view-enter { from { opacity: 0; } to { opacity: 1; } }
+        .success-icon { font-size: 56px; margin-bottom: 16px; animation: pop 0.6s var(--ease-bounce); }
+        @keyframes pop { 0%{transform:scale(0)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
+        .ticket-card { width: 100%; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 16px; padding: 24px; margin: 24px 0; position: relative; }
+        .data-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; border-bottom: 1px dashed #dee2e6; padding-bottom: 16px; }
+        .data-row:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+        .data-label { font-size: 10px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+        .data-val { font-size: 15px; font-weight: 600; color: #111; font-family: 'Consolas', monospace; word-break: break-all; }
+        .btn-copy { flex-shrink: 0; margin-left: 12px; padding: 6px 12px; font-size: 11px; font-weight: 700; color: var(--theme-primary); background: #fff; border: 1px solid #d1d5db; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+        .btn-copy:hover { background: #eef3f8; border-color: var(--theme-primary); }
+        
+        .status-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(255,255,255,0.6); border-radius: 20px; border: 1px solid rgba(0,0,0,0.05); }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #ccc; }
+        .status-dot.active { background: var(--theme-success); box-shadow: 0 0 6px var(--theme-success); }
+        .status-txt { font-size: 11px; font-weight: 600; color: #555; }
+        .meta-info { text-align: right; }
+        .meta-clock { font-size: 10px; color: #bbb; margin-top: 2px; }
+        
+        .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10000; pointer-events: none; }
+        .toast-msg { background: rgba(30, 30, 30, 0.9); color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 13px; font-weight: 600; opacity: 0; transform: translateY(20px); transition: all 0.4s var(--ease-bounce); }
+        .toast-msg.show { opacity: 1; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <canvas id="particle-canvas" class="canvas-layer"></canvas>
+    <canvas id="confetti-canvas" class="canvas-layer"></canvas>
+    <div class="toast-container" id="toast-queue"></div>
+
+    <div class="app-shell">
+        <div class="app-content">
+            <div class="header-group">
+                <div class="logo-trigger" onclick="System.reload()">
+                    <div class="rotator">
+                        <div class="logo-grid">
+                            <div class="tile t-r"></div><div class="tile t-g"></div>
+                            <div class="tile t-b"></div><div class="tile t-y"></div>
+                        </div>
+                    </div>
+                </div>
+                <h1 id="greeting-box"><span class="greeting-text">Welcome</span></h1>
+            </div>
+
+            <div id="view-form">
+                <div class="form-row">
+                    <label class="label">Display Name</label>
+                    <div class="input-box" id="wrap-dn">
+                        <input type="text" id="in-dn" placeholder="e.g. 刘宏鹏" autocomplete="off">
+                    </div>
+                    <div class="error-hint" id="err-dn">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span id="txt-dn">Name must be at least 2 chars</span>
+                    </div>
+                </div>
+
+                <div class="form-row" style="z-index: 20;">
+                    <label class="label">User Principal Name</label>
+                    <div class="input-box" style="border:none; padding:0; background:transparent;">
+                        <div class="combo-box">
+                            <div class="combo-input">
+                                <div class="input-box" id="wrap-un">
+                                    <input type="text" id="in-un" placeholder="liuhongpeng" autocomplete="off">
+                                </div>
+                            </div>
+                            <div class="combo-select" id="domain-trigger">
+                                <div class="domain-btn">
+                                    <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
+                                    <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
+                                </div>
+                                <div class="dropdown">
+                                    <div class="dd-item selected" data-v="tuv.edu.kg">@tuv.edu.kg</div>
+                                    <div class="dd-item" data-v="starproxy.onmicrosoft.com">@starproxy.onmicrosoft.com</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="error-hint" id="err-un">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span id="txt-un">3-20 chars, Letters/Numbers only</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label" style="color:var(--brand-yellow)">Access Token</label>
+                    <div class="input-box" id="wrap-ic">
+                        <input type="text" id="in-ic" placeholder="Enter Invitation Code">
+                    </div>
+                    <div class="error-hint" id="err-ic">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span id="txt-ic">Token Invalid</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <label class="label">Credentials</label>
+                    <div class="input-box" id="wrap-pw">
+                        <input type="text" id="in-pw" placeholder="8+ chars, A-Z, a-z, 0-9">
+                    </div>
+                    <div class="error-hint" id="err-pw">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span id="txt-pw">Too weak (Need Upper+Lower+Digit)</span>
+                    </div>
+                </div>
+
+                <button class="btn-primary" id="btn-submit" onclick="System.Actions.process()">
+                    <span id="btn-txt">Initialize Identity</span>
+                </button>
+            </div>
+
+            <div id="view-success">
+                <div class="success-icon">🎉</div>
+                <h2 style="color:var(--theme-success); margin:0; font-size:22px;">Identity Created</h2>
+                <p style="color:#666; font-size:14px; margin-top:4px;">Provisioning Complete</p>
+                <div class="ticket-card">
+                    <div class="data-row">
+                        <div style="flex:1; min-width:0;">
+                            <div class="data-label">User Principal Name</div>
+                            <div class="data-val" id="res-upn">user@domain.com</div>
+                        </div>
+                        <button class="btn-copy" id="copy-btn">COPY UPN</button>
+                    </div>
+                    <div class="data-row">
+                        <div style="flex:1;">
+                            <div class="data-label">Initial Password</div>
+                            <div class="data-val" id="res-pw">••••••••••</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-primary ready" onclick="window.location.href='https://office.com'">Sign in to Portal</button>
+            </div>
+        </div>
+
+        <div class="app-footer">
+            <div class="status-bar">
+                <div class="status-dot active"></div>
+                <div class="status-txt">Connected</div>
+            </div>
+            <div class="meta-info">
+                <div class="meta-clock" id="clock">00:00</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/* Knowhere OS v60.3 - Final Release with Dynamic Backend Integration */
+const System = {
+    Store: { domain: "tuv.edu.kg", isBusy: false },
+
+    init() {
+        this.Visuals.Particles.run();
+        this.Visuals.Clock.start();
+        this.Visuals.Greetings.loop();
+        this.Events.setup();
+        console.log("System Online: Final Release");
+    },
+    reload() { window.location.reload(); },
+    
+    Events: {
+        setup() {
+            const fields = ['dn', 'un', 'ic', 'pw'];
+            
+            fields.forEach(key => {
+                const inputEl = document.getElementById('in-' + key);
+                
+                // 1. INPUT 事件：实时监测
+                inputEl.addEventListener('input', () => {
+                    const val = inputEl.value.trim();
+                    const isValid = System.Security.validate(key, val);
+                    
+                    System.UI.clearError(key); 
+                    
+                    if (val.length > 0) {
+                        if (isValid) {
+                            System.UI.setValid(key, true);
+                        } else {
+                            System.UI.setValid(key, false);
+                        }
+                    } else {
+                        System.UI.setValid(key, false);
+                    }
+                    
+                    System.UI.updateBtnState();
+                });
+
+                // 2. BLUR 事件：失焦检测 (包含与真实的后端对接查重)
+                inputEl.addEventListener('blur', async () => {
+                    const val = inputEl.value.trim();
+                    
+                    if (val.length > 0) {
+                        // 2.1 先检查格式是否正确
+                        if (!System.Security.validate(key, val)) {
+                            System.UI.setError(key);
+                            System.UI.updateBtnState();
+                            return; 
+                        }
+
+                        // 2.2 用户名查重逻辑 (对接真实后端数据库)
+                        if (key === 'un') {
+                            try {
+                                const res = await fetch(`/api/check-username?username=${val}&domain=${System.Store.domain}`);
+                                const data = await res.json();
+                                if (!data.available) {
+                                    System.UI.setError(key, "username already taken");
+                                    System.UI.updateBtnState();
+                                    return;
+                                }
+                            } catch (e) {
+                                console.error("查重网络请求异常", e);
+                            }
+                        }
+                        
+                    } else {
+                        if (key !== 'dn') { 
+                             System.UI.setError(key, "This field is required");
+                        }
+                    }
+                    System.UI.updateBtnState();
+                });
+            });
+
+            const domTrig = document.getElementById('domain-trigger');
+            const domMenu = document.querySelector('.dropdown');
+            domTrig.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = domMenu.style.display === 'block';
+                domMenu.style.display = isOpen ? 'none' : 'block';
+                domTrig.classList.toggle('active', !isOpen);
+            });
+            document.querySelectorAll('.dd-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.dd-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    System.Store.domain = item.dataset.v;
+                    document.getElementById('domain-display').innerText = "@" + System.Store.domain;
+                    domMenu.style.display = 'none';
+                    domTrig.classList.remove('active');
+                    // 切换域名后，重新触发一次用户名查重
+                    const unInput = document.getElementById('in-un');
+                    if (unInput.value.trim().length > 0) {
+                        unInput.dispatchEvent(new Event('blur'));
+                    }
+                });
+            });
+            document.addEventListener('click', () => { domMenu.style.display = 'none'; domTrig.classList.remove('active'); });
+
+            document.getElementById('copy-btn').addEventListener('click', function() {
+                const txt = document.getElementById('res-upn').innerText;
+                navigator.clipboard.writeText(txt);
+                const original = this.innerText;
+                this.innerText = "COPIED!";
+                this.style.borderColor = "var(--theme-success)";
+                this.style.color = "var(--theme-success)";
+                setTimeout(() => {
+                    this.innerText = original;
+                    this.style.borderColor = "";
+                    this.style.color = "";
+                }, 1500);
+            });
+        }
+    },
+
+    UI: {
+        setValid(key, isValid) {
+            const el = document.getElementById('wrap-' + key);
+            if (isValid) {
+                el.classList.add('valid');
+                el.classList.remove('invalid');
+            } else {
+                el.classList.remove('valid');
+            }
+        },
+        setError(key, customMsg) {
+            const el = document.getElementById('wrap-' + key);
+            const errBox = document.getElementById('err-' + key);
+            el.classList.remove('valid');
+            el.classList.add('invalid');
+            if (customMsg) {
+                document.getElementById('txt-' + key).innerText = customMsg;
+            } else {
+                document.getElementById('txt-' + key).innerText = System.Security.msgs[key];
+            }
+            errBox.classList.add('show');
+        },
+        clearError(key) {
+            const el = document.getElementById('wrap-' + key);
+            const errBox = document.getElementById('err-' + key);
+            el.classList.remove('invalid');
+            errBox.classList.remove('show');
+        },
+        updateBtnState() {
+            const validCount = document.querySelectorAll('.input-box.valid').length;
+            const invalidCount = document.querySelectorAll('.input-box.invalid').length;
+            const btn = document.getElementById('btn-submit');
+            
+            if (validCount >= 4 && invalidCount === 0 && !System.Store.isBusy) {
+                btn.classList.add('ready');
+                btn.removeAttribute('disabled');
+                document.getElementById('btn-txt').innerText = "Deploy Account";
+            } else {
+                btn.classList.remove('ready');
+                btn.setAttribute('disabled', 'true');
+                if (!System.Store.isBusy) document.getElementById('btn-txt').innerText = "Initialize Identity";
+            }
+        },
+        toast(msg) {
+            const box = document.getElementById('toast-queue');
+            const el = document.createElement('div');
+            el.className = 'toast-msg';
+            el.innerText = msg;
+            box.appendChild(el);
+            setTimeout(() => el.classList.add('show'), 10);
+            setTimeout(() => {
+                el.classList.remove('show');
+                setTimeout(() => el.remove(), 400);
+            }, 3000);
+        }
+    },
+
+    Security: {
+        rules: {
+            dn: v => v.length >= 2,
+            un: v => /^[a-zA-Z0-9\-]{3,20}$/.test(v),
+            pw: v => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(v),
+            /* 前端不再写死密码，只要用户填了东西，前端校验就通过，真正对错交由后端的 API 判断 */
+            ic: v => v.trim().length > 0 
+        },
+        msgs: {
+            dn: "Display name is too short",
+            un: "3-20 chars, Letters/Numbers/- only",
+            pw: "Too weak (Need 8+ chars, A-Z, a-z, 0-9)",
+            ic: "Access Token cannot be empty"
+        },
+        validate(key, val) { return this.rules[key](val); },
+        translateError(raw) {
+            const m = (raw || "").toLowerCase();
+            if (m.includes('conflict') || m.includes('exists') || m.includes('在本地已注册')) return "该用户名已被占用";
+            if (m.includes('forbidden') || m.includes('code') || m.includes('邀请码无效')) return "邀请码无效或已过期";
+            if (m.includes('quota')) return "租户用户配额已满";
+            if (m.includes('password')) return "密码不符合微软安全要求";
+            if (m.includes('fetch') || m.includes('network') || m.includes('无法读取')) return "网络或配置异常，请联系管理员";
+            return "Error: " + (raw || "Unknown");
+        }
+    },
+
+    Actions: {
+        async process() {
+            if (System.Store.isBusy) return;
+            System.Store.isBusy = true;
+            
+            const btn = document.getElementById('btn-submit');
+            const txt = document.getElementById('btn-txt');
+            
+            txt.innerText = "Provisioning...";
+            btn.style.cursor = "wait";
+            btn.classList.remove('ready');
+            btn.disabled = true;
+
+            const payload = { 
+                username: document.getElementById('in-un').value.trim(), 
+                password: document.getElementById('in-pw').value.trim(),
+                displayName: document.getElementById('in-dn').value.trim(),
+                inviteCode: document.getElementById('in-ic').value.trim(),
+                domain: System.Store.domain 
+            };
+            
+            document.getElementById('res-pw').innerText = payload.password;
+
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    System.Visuals.Confetti.fire();
+                    document.getElementById('view-form').style.display = 'none';
+                    document.getElementById('view-success').style.display = 'flex';
+                    document.getElementById('res-upn').innerText = `${payload.username}@${payload.domain}`;
+                } else {
+                    // 如果后端返回错误（如邀请码错误），抛出异常让 catch 捕获处理
+                    throw new Error(data.msg || "Server rejected request");
+                }
+
+            } catch (e) {
+                console.error(e);
+                System.Store.isBusy = false;
+                btn.style.cursor = "pointer";
+                btn.classList.add('ready');
+                btn.disabled = false;
+                txt.innerText = "Deploy Account";
+                System.UI.toast(System.Security.translateError(e.message));
+                
+                // 如果是邀请码错误，让输入框爆红
+                if (e.message.includes('邀请码无效')) {
+                    System.UI.setError('ic', 'Invalid Access Token');
+                    System.UI.updateBtnState();
+                }
+            }
+        }
+    },
+    
+    Visuals: {
+        Clock: { start() { setInterval(() => { const d = new Date(); document.getElementById('clock').innerText = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0'); }, 1000); } },
+        Greetings: { loop() { const words = ["Hello", "你好", "Bonjour", "안녕하세요","Hola", "こんにちは","Ciao", "สวัสดีค่ะ"]; let i = 0; setInterval(() => { const el = document.getElementById('greeting-box'); i = (i + 1) % words.length; el.innerHTML = `<span class="greeting-text">${words[i]}</span>`; }, 2500); } },
+        Particles: { 
+            run() { 
+                const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
+                const resize = () => { w=cvs.width=window.innerWidth; h=cvs.height=window.innerHeight; }; window.addEventListener('resize', resize); resize();
+                window.addEventListener('mousemove', (e) => { mouse.x=e.x; mouse.y=e.y; }); window.addEventListener('mouseleave', () => { mouse.x=null; mouse.y=null; });
+                for(let i=0; i<45; i++) p.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-.5)*0.5, vy: (Math.random()-.5)*0.5 });
+                const animate = () => { ctx.clearRect(0,0,w,h); ctx.fillStyle = 'rgba(100,100,100,0.5)'; p.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0 || n.x>w) n.vx *= -1; if(n.y<0 || n.y>h) n.vy *= -1; if(mouse.x != null) { let dx = mouse.x - n.x; let dy = mouse.y - n.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 100) { const force = (100 - dist) / 100; n.x -= (dx / dist) * force * 2; n.y -= (dy / dist) * force * 2; } } ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(animate); }; animate();
+            } 
+        },
+        Confetti: { 
+            fire() { 
+                const cvs = document.getElementById('confetti-canvas'); const ctx = cvs.getContext('2d'); cvs.width = window.innerWidth; cvs.height = window.innerHeight; const pieces = []; const colors = ['#F25022', '#7FBA00', '#00A4EF', '#FFB900'];
+                for(let i=0; i<200; i++) pieces.push({ x: cvs.width/2, y: cvs.height/2, w: Math.random()*8+4, h: Math.random()*8+4, c: colors[Math.floor(Math.random()*4)], vx: (Math.random()-.5)*20, vy: (Math.random()-.5)*20-5, age: 0 });
+                const render = () => { ctx.clearRect(0,0,cvs.width,cvs.height); let active = false; pieces.forEach(e => { if(e.age > 120) return; active = true; e.x += e.vx; e.y += e.vy; e.vy += 0.5; e.age++; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, e.w, e.h); }); if(active) requestAnimationFrame(render); else ctx.clearRect(0,0,cvs.width,cvs.height); }; render();
+            } 
+        }
+    }
+};
+window.addEventListener('DOMContentLoaded', () => System.init());
+</script>
+</body>
+</html>
