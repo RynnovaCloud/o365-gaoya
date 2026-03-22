@@ -22,7 +22,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./m365-gaoya
           push: true
           # 镜像名字会变成 用户名/m365-gaoya:latest
           tags: ${{ secrets.DOCKER_USERNAME }}/m365-gaoya:latest
