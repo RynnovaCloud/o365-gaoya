@@ -39,37 +39,52 @@ const getConfig = () => {
 };
 
 // ==========================================
-// --- 2. 中间件：强制初始化拦截 ---
+// --- 2. 中间件：强制初始化拦截与安全防御 ---
 // ==========================================
 app.use(async (req, res, next) => {
-    // 放行安装页面、安装接口和静态资源
-    if (req.path === '/setup.html' || req.path === '/api/setup' || req.path === '/setup' || req.path.startsWith('/assets')) {
+    // 静态资源永远放行
+    if (req.path.startsWith('/assets')) return next();
+
+    if (isInitialized) {
+        // 【防御】一旦初始化成功，绝对禁止任何人再次访问安装页面，直接踢回管理后台
+        if (req.path === '/setup.html' || req.path === '/setup' || req.path === '/api/setup') {
+            return res.redirect('/admin');
+        }
         return next();
     }
 
-    if (!isInitialized) {
-        db.get("SELECT value FROM config WHERE key = 'tenantId'", (err, row) => {
-            if (!row) {
-                // 如果数据库里没有配置，拦截请求并跳转到 setup.html
-                if (req.xhr || req.headers.accept?.includes('json')) {
-                    return res.status(403).json({ success: false, msg: '系统未初始化，请先配置', requireSetup: true });
-                } else {
-                    return res.redirect('/setup.html');
-                }
-            } else {
-                isInitialized = true;
-                next();
+    // 去数据库确认是否真的未初始化
+    db.get("SELECT value FROM config WHERE key = 'tenantId'", (err, row) => {
+        if (!row) {
+            // 真没初始化，只放行安装路径
+            if (req.path === '/setup.html' || req.path === '/api/setup' || req.path === '/setup') {
+                return next();
             }
-        });
-    } else {
-        next();
-    }
+            if (req.xhr || req.headers.accept?.includes('json')) {
+                return res.status(403).json({ success: false, msg: '系统未初始化，请先配置', requireSetup: true });
+            } else {
+                return res.redirect('/setup');
+            }
+        } else {
+            isInitialized = true; // 更新内存状态
+            // 已经初始化了却还想访问 setup，踢回后台
+            if (req.path === '/setup.html' || req.path === '/setup' || req.path === '/api/setup') {
+                return res.redirect('/admin');
+            }
+            next();
+        }
+    });
 });
 
 // ==========================================
 // --- 3. 系统初始化 API (首次运行使用) ---
 // ==========================================
 app.post('/api/setup', (req, res) => {
+    // 【防御】后端接口也要拒绝二次初始化
+    if (isInitialized) {
+        return res.status(403).json({ success: false, msg: "系统已初始化，禁止重复配置" });
+    }
+
     // 接收新增的 siteName 和 allowedDomains
     const { adminUser, adminPass, tenantId, clientId, clientSecret, skuId, inviteCode, siteName, allowedDomains } = req.body;
 
@@ -94,7 +109,7 @@ app.post('/api/setup', (req, res) => {
         stmtConf.run('allowedDomains', allowedDomains || ''); // 存入如 "tuv.edu.kg, m365.pro"
         stmtConf.finalize();
 
-        isInitialized = true; // 更新内存状态，释放拦截
+        isInitialized = true; // 锁定安装门
         res.json({ success: true, msg: "系统初始化成功" });
     });
 });
@@ -206,17 +221,31 @@ app.get('/api/admin/config', async (req, res) => {
     if (!req.headers.authorization) return res.status(401).json({ success: false, msg: "未授权访问" });
     try {
         const conf = await getConfig();
-        res.json({ success: true, inviteCode: conf.inviteCode });
+        // 修改：现在连同 siteName 和 allowedDomains 一起返回给 admin.html
+        res.json({ 
+            success: true, 
+            inviteCode: conf.inviteCode,
+            siteName: conf.siteName || '',
+            allowedDomains: conf.allowedDomains || ''
+        });
     } catch (e) { res.json({ success: false, msg: "读取配置失败" }); }
 });
 
 app.post('/api/admin/config', (req, res) => {
     if (!req.headers.authorization) return res.status(401).json({ success: false, msg: "未授权访问" });
-    const { inviteCode } = req.body;
+    
+    // 修改：支持接收三个字段的更新
+    const { inviteCode, siteName, allowedDomains } = req.body;
     if (!inviteCode) return res.json({ success: false, msg: "邀请码不能为空" });
-    db.run("UPDATE config SET value = ? WHERE key = 'inviteCode'", [inviteCode], function(err) {
-        if (err) return res.json({ success: false, msg: "数据库更新失败" });
-        res.json({ success: true, msg: "系统邀请码已更新！" });
+
+    db.serialize(() => {
+        const stmt = db.prepare("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)");
+        stmt.run('inviteCode', inviteCode);
+        stmt.run('siteName', siteName || 'Microsoft 365 自动化管理');
+        stmt.run('allowedDomains', allowedDomains || '');
+        stmt.finalize();
+        
+        res.json({ success: true, msg: "系统配置已完美更新！" });
     });
 });
 
