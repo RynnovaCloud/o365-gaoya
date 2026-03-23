@@ -46,7 +46,6 @@
          * ========================================================================== */
         .header-group { text-align: center; margin-bottom: 32px; }
         .logo-trigger { width: 50px; height: 50px; margin: 0 auto 16px; position: relative; cursor: pointer; }
-        /* 恢复原版 hover 旋转 */
         @keyframes hover-spin-infinite { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .logo-trigger:hover { animation: hover-spin-infinite 2s linear infinite; }
 
@@ -139,6 +138,18 @@
 
             <div id="view-dashboard">
                 <div class="form-row">
+                    <label class="label">Site Name (Brand)</label>
+                    <div class="input-box">
+                        <input type="text" id="in-siteName" placeholder="e.g. M365 Cloud Center" autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label class="label">Allowed Domains (Comma separated)</label>
+                    <div class="input-box">
+                        <input type="text" id="in-domains" placeholder="e.g. tuv.edu.kg, m365.pro" autocomplete="off">
+                    </div>
+                </div>
+                <div class="form-row">
                     <label class="label" style="color:var(--brand-yellow)">Current Access Token (Invite Code)</label>
                     <div class="input-box" style="border-color: var(--brand-yellow);">
                         <input type="text" id="in-invite" placeholder="Loading...">
@@ -147,11 +158,10 @@
                         Update this code to immediately invalidate the old one. Users must use the new code to register.
                     </div>
                 </div>
-                <button class="btn-primary" onclick="Admin.saveConfig()">Update Access Token</button>
+                <button class="btn-primary" onclick="Admin.saveConfig()">Update System Configuration</button>
                 <button class="btn-primary btn-danger" onclick="Admin.logout()">Sign Out</button>
             </div>
-
-        </div>
+            </div>
 
         <div class="app-footer">
             <div style="font-size: 11px; font-weight: 600; color: #888;">
@@ -230,6 +240,7 @@ const Admin = {
         this.UI.toast("Signed out successfully");
     },
 
+    // ================= 修改点：读取接口同时获取并渲染 siteName 和 domains =================
     async loadConfig() {
         try {
             const res = await fetch('/api/admin/config', {
@@ -237,7 +248,9 @@ const Admin = {
             });
             const data = await res.json();
             if (data.success) {
-                document.getElementById('in-invite').value = data.inviteCode;
+                document.getElementById('in-invite').value = data.inviteCode || '';
+                document.getElementById('in-siteName').value = data.siteName || '';
+                document.getElementById('in-domains').value = data.allowedDomains || '';
             } else {
                 this.logout(); // Token 失效自动退出
             }
@@ -246,9 +259,15 @@ const Admin = {
         }
     },
 
+    // ================= 修改点：保存接口把三个配置打包一起发给后端 =================
     async saveConfig() {
-        const newCode = document.getElementById('in-invite').value.trim();
-        if(!newCode) return this.UI.toast("Code cannot be empty");
+        const payload = {
+            inviteCode: document.getElementById('in-invite').value.trim(),
+            siteName: document.getElementById('in-siteName').value.trim(),
+            allowedDomains: document.getElementById('in-domains').value.trim()
+        };
+
+        if(!payload.inviteCode) return this.UI.toast("Code cannot be empty");
 
         try {
             const res = await fetch('/api/admin/config', {
@@ -257,7 +276,7 @@ const Admin = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('adminToken')}` 
                 },
-                body: JSON.stringify({ inviteCode: newCode })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             this.UI.toast(data.msg);
@@ -277,17 +296,12 @@ const Admin = {
         }
     },
 
-    // ==========================================
-    // --- 动效核心 (完全移植原版 index.html JS) ---
-    // ==========================================
     Visuals: {
         Particles: { 
             run() { 
                 const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
                 const resize = () => { w=cvs.width=window.innerWidth; h=cvs.height=window.innerHeight; }; window.addEventListener('resize', resize); resize();
-                // 恢复原版鼠标互动
                 window.addEventListener('mousemove', (e) => { mouse.x=e.x; mouse.y=e.y; }); window.addEventListener('mouseleave', () => { mouse.x=null; mouse.y=null; });
-                // 恢复原版 45 个粒子
                 for(let i=0; i<45; i++) p.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-.5)*0.5, vy: (Math.random()-.5)*0.5 });
                 const animate = () => { ctx.clearRect(0,0,w,h); ctx.fillStyle = 'rgba(100,100,100,0.5)'; p.forEach(n => { n.x += n.vx; n.y += n.vy; if(n.x<0 || n.x>w) n.vx *= -1; if(n.y<0 || n.y>h) n.vy *= -1; if(mouse.x != null) { let dx = mouse.x - n.x; let dy = mouse.y - n.y; let dist = Math.sqrt(dx*dx + dy*dy); if (dist < 100) { const force = (100 - dist) / 100; n.x -= (dx / dist) * force * 2; n.y -= (dy / dist) * force * 2; } } ctx.beginPath(); ctx.arc(n.x, n.y, 1.5, 0, Math.PI*2); ctx.fill(); }); requestAnimationFrame(animate); }; animate();
             } 
