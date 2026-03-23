@@ -5,8 +5,6 @@ const path = require('path');
 const app = express();
 
 app.use(express.json());
-// 开放 public 目录，所有的 html 前端文件都在这里
-app.use(express.static(path.join(__dirname, 'public'))); 
 
 // ==========================================
 // --- 1. 数据库初始化 ---
@@ -40,9 +38,10 @@ const getConfig = () => {
 
 // ==========================================
 // --- 2. 中间件：强制初始化拦截与安全防御 ---
+// ⚠️ 关键修改：必须放在 express.static 的前面，才能做到完美拦截！
 // ==========================================
 app.use(async (req, res, next) => {
-    // 静态资源永远放行
+    // 静态资源永远放行 (保证网页有样式)
     if (req.path.startsWith('/assets')) return next();
 
     if (isInitialized) {
@@ -60,6 +59,8 @@ app.use(async (req, res, next) => {
             if (req.path === '/setup.html' || req.path === '/api/setup' || req.path === '/setup') {
                 return next();
             }
+            
+            // 🚨 核心拦截：如果没初始化，访问其他任何页面（包括首页）都强制跳转去安装！
             if (req.xhr || req.headers.accept?.includes('json')) {
                 return res.status(403).json({ success: false, msg: '系统未初始化，请先配置', requireSetup: true });
             } else {
@@ -77,7 +78,13 @@ app.use(async (req, res, next) => {
 });
 
 // ==========================================
-// --- 3. 系统初始化 API (首次运行使用) ---
+// --- 3. 静态文件托管 ---
+// ⚠️ 关键修改：把它挪到了安检门的后面。现在不初始化，谁也别想看到 index.html
+// ==========================================
+app.use(express.static(path.join(__dirname, 'public'))); 
+
+// ==========================================
+// --- 4. 系统初始化 API (首次运行使用) ---
 // ==========================================
 app.post('/api/setup', (req, res) => {
     // 【防御】后端接口也要拒绝二次初始化
@@ -115,7 +122,7 @@ app.post('/api/setup', (req, res) => {
 });
 
 // ==========================================
-// --- 4. 前台公共配置 API (供首页 index.html 动态渲染) ---
+// --- 5. 前台公共配置 API (供首页 index.html 动态渲染) ---
 // ==========================================
 app.get('/api/pub-config', async (req, res) => {
     try {
@@ -132,7 +139,7 @@ app.get('/api/pub-config', async (req, res) => {
 });
 
 // ==========================================
-// --- 5. 前台注册 API (主页使用) ---
+// --- 6. 前台注册 API (主页使用) ---
 // ==========================================
 
 // 用户名实时查重接口
@@ -205,7 +212,7 @@ app.post('/api/register', async (req, res) => {
 });
 
 // ==========================================
-// --- 6. 管理后台专属 API ---
+// --- 7. 管理后台专属 API ---
 // ==========================================
 
 app.post('/api/admin/login', (req, res) => {
@@ -221,7 +228,6 @@ app.get('/api/admin/config', async (req, res) => {
     if (!req.headers.authorization) return res.status(401).json({ success: false, msg: "未授权访问" });
     try {
         const conf = await getConfig();
-        // 修改：现在连同 siteName 和 allowedDomains 一起返回给 admin.html
         res.json({ 
             success: true, 
             inviteCode: conf.inviteCode,
@@ -234,7 +240,6 @@ app.get('/api/admin/config', async (req, res) => {
 app.post('/api/admin/config', (req, res) => {
     if (!req.headers.authorization) return res.status(401).json({ success: false, msg: "未授权访问" });
     
-    // 修改：支持接收三个字段的更新
     const { inviteCode, siteName, allowedDomains } = req.body;
     if (!inviteCode) return res.json({ success: false, msg: "邀请码不能为空" });
 
@@ -250,7 +255,7 @@ app.post('/api/admin/config', (req, res) => {
 });
 
 // ==========================================
-// --- 路由美化 ---
+// --- 8. 路由美化 ---
 // ==========================================
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.get('/setup', (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
