@@ -22,19 +22,18 @@
             --color-bg-app: #f0f2f5; 
             --color-surface: rgba(255, 255, 255, 0.94); 
             --radius-card: 24px; 
-            --radius-input: 12px; 
-            --radius-btn: 12px; 
+            --radius-input: 18px; 
+            --radius-btn: 16px; 
             --input-height: 56px; 
             
             --ease-fluent: cubic-bezier(0.1, 0.9, 0.2, 1); 
             --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
+            --bezier-soft: cubic-bezier(0.16, 1, 0.3, 1);
             
-            /* Logo 专用动画曲线 */
             --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
             --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
 
             --shadow-card: 0 32px 64px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04); 
-            --shadow-input-focus: 0 4px 12px rgba(0, 90, 158, 0.15); 
             --backdrop-blur: blur(30px) saturate(180%); 
         }
 
@@ -58,82 +57,57 @@
          * ========================================================================== */
         .header-group { text-align: center; margin-bottom: 32px; }
         
-        .logo-trigger { 
-            width: 50px; 
-            height: 50px; 
-            margin: 0 auto 16px; 
-            position: relative; 
-            cursor: pointer; 
-        }
+        .logo-trigger { width: 50px; height: 50px; margin: 0 auto 16px; position: relative; cursor: pointer; }
         @keyframes hover-spin-infinite { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .logo-trigger:hover { animation: hover-spin-infinite 2s linear infinite; }
 
         .rotator { width: 100%; height: 100%; animation: damping-spin 12s infinite; }
-        @keyframes damping-spin {
-            0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); }
-            70% { transform: rotate(2160deg); }
-            100% { transform: rotate(2160deg); }
-        }
+        @keyframes damping-spin { 0% { transform: rotate(0deg); animation-timing-function: var(--ease-damping); } 70% { transform: rotate(2160deg); } 100% { transform: rotate(2160deg); } }
 
         .logo-grid { width: 100%; height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; animation: damping-gap 12s infinite; }
-        @keyframes damping-gap {
-            0% { gap: 4px; animation-timing-function: var(--ease-breath); }
-            12% { gap: 12px; }
-            58% { gap: 12px; animation-timing-function: var(--ease-breath); }
-            70% { gap: 4px; }
-            100% { gap: 4px; }
-        }
+        @keyframes damping-gap { 0% { gap: 4px; animation-timing-function: var(--ease-breath); } 12% { gap: 12px; } 58% { gap: 12px; animation-timing-function: var(--ease-breath); } 70% { gap: 4px; } 100% { gap: 4px; } }
 
         .tile { width: 100%; height: 100%; border-radius: 0px; animation: damping-morph 12s infinite; }
-        @keyframes damping-morph {
-            0% { border-radius: 0px; transform: scale(1); animation-timing-function: var(--ease-breath); }
-            12% { border-radius: 50%; transform: scale(0.85); } 
-            58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); }
-            70% { border-radius: 0px; transform: scale(1); }
-            100% { border-radius: 0px; transform: scale(1); }
-        }
+        @keyframes damping-morph { 0% { border-radius: 0px; transform: scale(1); animation-timing-function: var(--ease-breath); } 12% { border-radius: 50%; transform: scale(0.85); } 58% { border-radius: 50%; transform: scale(0.85); animation-timing-function: var(--ease-breath); } 70% { border-radius: 0px; transform: scale(1); } 100% { border-radius: 0px; transform: scale(1); } }
         
         .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
 
         /* ==========================================================================
-         * 3. 业务组件样式
+         * 3. 业务组件及 UI 样式
          * ========================================================================== */
         h1 { margin: 0; height: 32px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
         .greeting-text { display: block; animation: text-cycle 2.5s infinite var(--ease-fluent); }
         @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(10px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
         
         .form-row { margin-bottom: 24px; position: relative; }
-        .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 8px; margin-left: 4px; text-transform: uppercase; }
+        .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 8px; margin-left: 6px; text-transform: uppercase; }
         
         .input-box { 
-            display: flex; 
-            align-items: center; 
-            position: relative; 
-            height: var(--input-height); 
-            background: #f7f7f7; 
-            border: 1px solid var(--color-border); 
-            border-radius: var(--radius-input); 
-            transition: all 0.2s ease; 
+            display: flex; align-items: center; position: relative; height: var(--input-height); 
+            background: #ffffff; border: 1px solid var(--color-border); border-radius: var(--radius-input); 
+            transition: 0.3s var(--bezier-soft); box-sizing: border-box; width: 100%;
         }
-        .input-box:focus-within { border-color: var(--theme-primary); box-shadow: var(--shadow-input-focus); transform: translateY(-1px); background: #ffffff; }
-        .input-box.valid { border-color: var(--theme-success); background: #f8fff8; }
-        .input-box.valid::after { content: '✓'; position: absolute; right: 12px; color: var(--theme-success); font-weight: bold; }
-        .input-box.invalid { border-color: var(--theme-error); background: #fffcfc; animation: shake 0.4s var(--ease-bounce); }
-        .input-box.invalid::after { content: '!'; position: absolute; right: 12px; color: var(--theme-error); font-weight: bold; }
-        @keyframes shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-4px)} 40%,80%{transform:translateX(4px)} }
+        .input-box:focus-within { border-color: var(--theme-primary); box-shadow: 0 0 0 5px rgba(0, 90, 158, 0.1); }
+        .input-box.valid { border-color: var(--theme-success) !important; background: #fafffa !important; box-shadow: 0 0 0 5px rgba(16, 124, 16, 0.12) !important; }
+        .input-box.invalid { border-color: var(--theme-error) !important; background: #fffafa !important; box-shadow: 0 0 0 5px rgba(197, 15, 31, 0.08) !important; animation: damp-shake 0.4s var(--bezier-soft) !important; }
         
-        input { width: 100%; height: 100%; border: none; background: transparent; padding: 0 16px; font-size: 15px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
+        @keyframes damp-shake { 0%, 100% { transform: translateX(0); } 15% { transform: translateX(-8px); } 30% { transform: translateX(7px); } 45% { transform: translateX(-5px); } }
+        
+        input { width: 100%; height: 100%; border: none !important; outline: none !important; background: transparent !important; padding: 0 16px; font-size: 15px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
         
         .combo-box { display: flex; width: 100%; height: 100%; gap: 8px; }
         .combo-input { flex: 1; min-width: 0; }
         .combo-select { flex: 0 0 auto; max-width: 55%; position: relative; }
         
-        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #f9f9f9; border: 1px solid var(--color-border); border-radius: var(--radius-input); cursor: pointer; transition: 0.2s; }
-        .domain-btn:hover { background: #f0f0f0; border-color: #aaa; }
+        @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
+        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
+        .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
+        .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        .domain-val { font-size: 13px; font-weight: 600; color: var(--theme-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; display: inline-block; vertical-align: middle; }
+        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); white-space: nowrap; overflow-x: auto; max-width: 120px; display: inline-block; vertical-align: middle; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .domain-val::-webkit-scrollbar { display: none; }
         
-        .icon-chev { width: 10px; fill: #666; transition: 0.3s; flex-shrink: 0; }
+        .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
         
         .dropdown { position: absolute; top: calc(100% + 6px); right: 0; min-width: 100%; width: max-content; background: rgba(255,255,255,0.98); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); padding: 6px; z-index: 100; display: none; animation: fade-in-up 0.2s ease; }
@@ -142,15 +116,22 @@
         .dd-item:hover { background: #f5f5f5; }
         .dd-item.selected { background: rgba(0,90,158,0.08); color: var(--theme-primary); font-weight: 700; }
         
-        .error-hint { display: flex; align-items: center; gap: 4px; margin-top: 6px; margin-left: 4px; font-size: 11px; font-weight: 600; color: var(--theme-error); height: 0; opacity: 0; overflow: hidden; transition: all 0.3s ease; }
-        .error-hint.show { height: 20px; opacity: 1; margin-bottom: 4px; }
-        .error-hint svg { width: 12px; fill: currentColor; }
+        /* 优化后的报错提示：与输入框文字左对齐，并加入顺滑的展开折叠动画 */
+        .error-hint { 
+            display: flex; align-items: flex-start; gap: 6px; 
+            margin-top: 0; margin-left: 14px; /* 完美对齐输入框文字 */
+            font-size: 12px; font-weight: 600; color: var(--theme-error); 
+            max-height: 0; opacity: 0; overflow: hidden; 
+            transition: all 0.3s var(--bezier-soft); 
+        }
+        .error-hint.show { max-height: 40px; opacity: 1; margin-top: 8px; margin-bottom: 4px; }
+        .error-hint svg { width: 14px; fill: currentColor; flex-shrink: 0; margin-top: 1px; }
         
-        .btn-primary { width: 100%; height: 58px; margin-top: 24px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; cursor: not-allowed; transition: all 0.3s var(--ease-fluent); display: flex; justify-content: center; align-items: center; gap: 8px; overflow: hidden; position: relative; opacity: 0.7; }
-        .btn-primary.ready { background: var(--theme-success); box-shadow: 0 8px 20px rgba(16,124,16,0.25); cursor: pointer; opacity: 1; }
+        .btn-primary { width: 100%; height: 58px; margin-top: 24px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; cursor: not-allowed; transition: all 0.4s var(--ease-fluent); display: flex; justify-content: center; align-items: center; gap: 8px; overflow: hidden; position: relative; opacity: 0.8; }
+        .btn-primary.ready { background: var(--theme-success); box-shadow: 0 10px 20px rgba(16, 124, 16, 0.25); cursor: pointer; opacity: 1; }
         .btn-primary.ready:hover { transform: translateY(-2px); background: #0e6f0e; }
         .btn-primary.ready:active { transform: scale(0.98); }
-        .btn-primary:disabled { cursor: wait; opacity: 0.7; }
+        .btn-primary:disabled { cursor: wait; opacity: 0.7; box-shadow: none; }
         
         #view-success { display: none; flex-direction: column; align-items: center; padding-top: 10px; animation: view-enter 0.5s; }
         @keyframes view-enter { from { opacity: 0; } to { opacity: 1; } }
@@ -203,13 +184,13 @@
                     </div>
                     <div class="error-hint" id="err-dn">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                        <span id="txt-dn">Name must be at least 2 chars</span>
+                        <span id="txt-dn">请输入真实姓名</span>
                     </div>
                 </div>
 
                 <div class="form-row" style="z-index: 20;">
                     <label class="label">User Principal Name</label>
-                    <div class="input-box" style="border:none; padding:0; background:transparent;">
+                    <div class="input-box" style="border:none; padding:0; background:transparent; box-shadow:none;">
                         <div class="combo-box">
                             <div class="combo-input">
                                 <div class="input-box" id="wrap-un">
@@ -218,39 +199,38 @@
                             </div>
                             <div class="combo-select" id="domain-trigger">
                                 <div class="domain-btn">
-                                    <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
+                                    <span class="domain-val" id="domain-display" title="向左滑动查看完整域名">@tuv.edu.kg</span>
                                     <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                                 </div>
-                                <div class="dropdown">
-                                </div>
+                                <div class="dropdown"></div>
                             </div>
                         </div>
                     </div>
                     <div class="error-hint" id="err-un">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                        <span id="txt-un">3-20 chars, Letters/Numbers only</span>
+                        <span id="txt-un">用户名须为3-20位字母或数字</span>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <label class="label" style="color:var(--brand-yellow)">Access Token</label>
                     <div class="input-box" id="wrap-ic">
-                        <input type="text" id="in-ic" placeholder="Enter Invitation Code">
+                        <input type="text" id="in-ic" placeholder="输入内部邀请码">
                     </div>
                     <div class="error-hint" id="err-ic">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                        <span id="txt-ic">Token Invalid</span>
+                        <span id="txt-ic">验证码无效或不匹配</span>
                     </div>
                 </div>
 
                 <div class="form-row">
                     <label class="label">Credentials</label>
                     <div class="input-box" id="wrap-pw">
-                        <input type="text" id="in-pw" placeholder="8+ chars, A-Z, a-z, 0-9">
+                        <input type="text" id="in-pw" placeholder="包含大小写及数字(至少8位)">
                     </div>
                     <div class="error-hint" id="err-pw">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                        <span id="txt-pw">Too weak (Need Upper+Lower+Digit)</span>
+                        <span id="txt-pw">需包含大写、小写及数字(至少8位)</span>
                     </div>
                 </div>
 
@@ -294,7 +274,6 @@
     </div>
 
 <script>
-/* Knowhere OS v60.5 - Flawless UI Iteration */
 const System = {
     Store: { domain: "tuv.edu.kg", isBusy: false },
 
@@ -322,12 +301,10 @@ const System = {
                         `<div class="dd-item ${i === 0 ? 'selected' : ''}" data-v="${d}">@${d}</div>`
                     ).join('');
 
-                    // ====== 新增：如果只有一个域名，保留框UI，隐藏箭头并禁用点击 ======
                     if (safeDomains.length === 1) {
-                        document.querySelector('.icon-chev').style.display = 'none'; // 隐藏箭头
-                        document.getElementById('domain-trigger').style.pointerEvents = 'none'; // 禁用点击，同时防止 hover 变色
+                        document.querySelector('.icon-chev').style.display = 'none'; 
+                        document.getElementById('domain-trigger').style.pointerEvents = 'none'; 
                     }
-                    // =========================================================
                 }
             }
         } catch (e) {
@@ -376,7 +353,7 @@ const System = {
                                 const res = await fetch(`/api/check-username?username=${val}&domain=${System.Store.domain}`);
                                 const data = await res.json();
                                 if (!data.available) {
-                                    System.UI.setError(key, "username already taken");
+                                    System.UI.setError(key, "该用户名已被占用");
                                     System.UI.updateBtnState();
                                     return;
                                 }
@@ -385,7 +362,7 @@ const System = {
                             }
                         }
                     } else {
-                        if (key !== 'dn') System.UI.setError(key, "This field is required");
+                        if (key !== 'dn') System.UI.setError(key, "该字段不能为空");
                     }
                     System.UI.updateBtnState();
                 });
@@ -491,11 +468,12 @@ const System = {
             pw: v => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(v),
             ic: v => v.trim().length > 0 
         },
+        /* 更新为对应的中文提示 */
         msgs: {
-            dn: "Display name is too short",
-            un: "3-20 chars, Letters/Numbers/- only",
-            pw: "Too weak (Need 8+ chars, A-Z, a-z, 0-9)",
-            ic: "Access Token cannot be empty"
+            dn: "请输入真实姓名",
+            un: "用户名须为3-20位字母或数字",
+            pw: "需包含大写、小写及数字(至少8位)",
+            ic: "请输入内部邀请码"
         },
         validate(key, val) { return this.rules[key](val); },
         translateError(raw) {
@@ -563,7 +541,7 @@ const System = {
                 System.UI.toast(translatedMsg);
                 
                 if (translatedMsg.includes('邀请码无效')) {
-                    System.UI.setError('ic', 'Invalid Access Token');
+                    System.UI.setError('ic', '验证码无效或已过期');
                     System.UI.updateBtnState();
                 }
             }
