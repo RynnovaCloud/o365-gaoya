@@ -27,8 +27,8 @@
 
 ```bash
 # 1. 创建项目根目录
-mkdir -p /opt/1panel/apps/m365-console
-cd /opt/1panel/apps/m365-console
+mkdir -p /opt/1panel/apps/m365-gaoya
+cd /opt/1panel/apps/m365-gaoya
 
 # 2. 创建一个空的数据库文件 (⚠️ 非常重要)
 touch database.db
@@ -36,13 +36,13 @@ touch database.db
 *(如果你使用 1Panel 面板，可以直接在【主机】->【文件】中手动新建文件夹和这个名为 `database.db` 的空文件)*
 
 ### 2. 创建 Docker Compose 编排文件
-在刚才创建的 `m365-console` 目录下，新建 `docker-compose.yml` 文件，填入以下配置：
+在刚才创建的 `o365-gaoya` 目录下，新建 `docker-compose.yml` 文件，填入以下配置：
 
 ```yaml
 version: '3.8'
 services:
   m365-server:
-    image: your-dockerhub-username/o365-app:latest  # ⚠️ 部署前请务必替换为你自己的 Docker Hub 镜像地址
+    image: your-dockerhub-username/o365-gaoya:latest  # ⚠️ 部署前请务必替换为你自己的 Docker Hub 镜像地址
     container_name: o365-gaoya
     ports:
       - "3000:3000"  # 宿主机端口:容器内端口
