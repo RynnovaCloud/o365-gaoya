@@ -42,8 +42,8 @@ touch database.db
 version: '3.8'
 services:
   m365-server:
-    image: your-dockerhub-username/m365-app:latest  # ⚠️ 部署前请务必替换为你自己的 Docker Hub 镜像地址
-    container_name: m365-console
+    image: your-dockerhub-username/o365-app:latest  # ⚠️ 部署前请务必替换为你自己的 Docker Hub 镜像地址
+    container_name: o365-gaoya
     ports:
       - "3000:3000"  # 宿主机端口:容器内端口
     volumes:
@@ -54,7 +54,7 @@ services:
 ### 3. 一键启动服务
 **通过 1Panel 面板启动：**
 1. 进入左侧菜单 **【容器】 -> 【编排】 -> 【创建编排】**。
-2. 路径选择刚才创建的 `m365-console` 目录，确认读取到 YAML 文件后点击启动。
+2. 路径选择刚才创建的 `o365-gaoya` 目录，确认读取到 YAML 文件后点击启动。
 
 **通过 SSH 终端启动：**
 ```bash

@@ -1,6 +1,6 @@
 {
   "name": "microsoft-365-automation",
-  "version": "1.0.0",
+  "version": "4.2.2",
   "description": "Microsoft 365 Automation Account Allocation",
   "main": "server.js",
   "scripts": {
