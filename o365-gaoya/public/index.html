@@ -97,16 +97,18 @@
         
         .combo-box { display: flex; width: 100%; height: 100%; gap: 8px; }
         .combo-input { flex: 1; min-width: 0; }
-        .combo-select { flex: 0 0 auto; max-width: 55%; position: relative; }
+        
+        /* --- 优化：域名下拉框及按钮样式（弹性适应长域名） --- */
+        .combo-select { flex: 0 1 auto; min-width: 80px; max-width: 65%; position: relative; }
         
         @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
-        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
+        .domain-btn { height: 100%; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: rgba(16, 124, 16, 0.06); border: 1px solid rgba(16, 124, 16, 0.15); border-radius: var(--radius-input); cursor: pointer; transition: all 0.3s var(--bezier-soft); white-space: nowrap; }
         .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
-        .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
+        .domain-btn:hover { background: rgba(16, 124, 16, 0.12); border-color: var(--theme-success); }
         
-        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); white-space: nowrap; overflow-x: auto; max-width: 120px; display: inline-block; vertical-align: middle; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .domain-val::-webkit-scrollbar { display: none; }
-        
+        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; display: inline-block; vertical-align: middle; }
+        /* ------------------------------------------------ */
+
         .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
         
@@ -116,10 +118,9 @@
         .dd-item:hover { background: #f5f5f5; }
         .dd-item.selected { background: rgba(0,90,158,0.08); color: var(--theme-primary); font-weight: 700; }
         
-        /* 优化后的报错提示：与输入框文字左对齐，并加入顺滑的展开折叠动画 */
         .error-hint { 
             display: flex; align-items: flex-start; gap: 6px; 
-            margin-top: 0; margin-left: 14px; /* 完美对齐输入框文字 */
+            margin-top: 0; margin-left: 14px; 
             font-size: 12px; font-weight: 600; color: var(--theme-error); 
             max-height: 0; opacity: 0; overflow: hidden; 
             transition: all 0.3s var(--bezier-soft); 
@@ -199,7 +200,7 @@
                             </div>
                             <div class="combo-select" id="domain-trigger">
                                 <div class="domain-btn">
-                                    <span class="domain-val" id="domain-display" title="向左滑动查看完整域名">@tuv.edu.kg</span>
+                                    <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
                                     <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                                 </div>
                                 <div class="dropdown"></div>
@@ -294,7 +295,9 @@ const System = {
 
                 if (safeDomains.length > 0) {
                     this.Store.domain = safeDomains[0];
-                    document.getElementById('domain-display').innerText = "@" + safeDomains[0];
+                    const domDisplay = document.getElementById('domain-display');
+                    domDisplay.innerText = "@" + safeDomains[0];
+                    domDisplay.title = "@" + safeDomains[0]; // --- 优化：添加完整气泡提示 ---
                     
                     const dropdown = document.querySelector('.dropdown');
                     dropdown.innerHTML = safeDomains.map((d, i) => 
@@ -385,7 +388,11 @@ const System = {
                 document.querySelectorAll('.dd-item').forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
                 System.Store.domain = item.dataset.v;
-                document.getElementById('domain-display').innerText = "@" + System.Store.domain;
+                
+                const domDisplay = document.getElementById('domain-display');
+                domDisplay.innerText = "@" + System.Store.domain;
+                domDisplay.title = "@" + System.Store.domain; // --- 优化：切换下拉框时同步更新气泡提示 ---
+                
                 domMenu.style.display = 'none';
                 domTrig.classList.remove('active');
                 
@@ -468,7 +475,6 @@ const System = {
             pw: v => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(v),
             ic: v => v.trim().length > 0 
         },
-        /* 更新为对应的中文提示 */
         msgs: {
             dn: "请输入真实姓名",
             un: "用户名须为3-20位字母或数字",
