@@ -30,6 +30,7 @@
             --ease-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6); 
             --bezier-soft: cubic-bezier(0.16, 1, 0.3, 1);
             
+            /* Logo 专用动画曲线 */
             --ease-damping: cubic-bezier(0.5, 0, 0.1, 1); 
             --ease-breath: cubic-bezier(0.4, 0.0, 0.2, 1); 
 
@@ -75,9 +76,7 @@
         /* ==========================================================================
          * 3. 业务组件及 UI 样式
          * ========================================================================== */
-        /* ⬇️ 这里加粗并放大了标题，和 Elegent 保持一致 */
         h1 { margin: 0; height: 40px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        /* ⬇️ 这里把动画时长改成了 3s，更从容 */
         .greeting-text { display: block; animation: text-cycle 3s infinite var(--ease-fluent); }
         @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(12px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-12px); filter: blur(4px); } }
         
@@ -101,13 +100,11 @@
         .combo-input { flex: 1; min-width: 0; }
         .combo-select { flex: 0 0 auto; max-width: 55%; position: relative; }
         
-        @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
         .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
-        .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
         .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); white-space: nowrap; overflow-x: auto; max-width: 120px; display: inline-block; vertical-align: middle; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .domain-val::-webkit-scrollbar { display: none; }
+        .domain-scroll-container { display: inline-block; vertical-align: middle; max-width: 120px; overflow: hidden; white-space: nowrap; position: relative; }
+        .domain-val { display: inline-block; font-size: 13px; font-weight: 700; color: var(--theme-success); transition: transform 0.2s linear; }
         
         .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
@@ -118,13 +115,7 @@
         .dd-item:hover { background: #f5f5f5; }
         .dd-item.selected { background: rgba(0,90,158,0.08); color: var(--theme-primary); font-weight: 700; }
         
-        .error-hint { 
-            display: flex; align-items: flex-start; gap: 6px; 
-            margin-top: 0; margin-left: 14px; 
-            font-size: 12px; font-weight: 600; color: var(--theme-error); 
-            max-height: 0; opacity: 0; overflow: hidden; 
-            transition: all 0.3s var(--bezier-soft); 
-        }
+        .error-hint { display: flex; align-items: flex-start; gap: 6px; margin-top: 0; margin-left: 14px; font-size: 12px; font-weight: 600; color: var(--theme-error); max-height: 0; opacity: 0; overflow: hidden; transition: all 0.3s var(--bezier-soft); }
         .error-hint.show { max-height: 40px; opacity: 1; margin-top: 8px; margin-bottom: 4px; }
         .error-hint svg { width: 14px; fill: currentColor; flex-shrink: 0; margin-top: 1px; }
         
@@ -200,7 +191,9 @@
                             </div>
                             <div class="combo-select" id="domain-trigger">
                                 <div class="domain-btn">
-                                    <span class="domain-val" id="domain-display" title="向左滑动查看完整域名">@tuv.edu.kg</span>
+                                    <div class="domain-scroll-container">
+                                        <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
+                                    </div>
                                     <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                                 </div>
                                 <div class="dropdown"></div>
@@ -316,6 +309,7 @@ const System = {
         this.Visuals.Clock.start();
         this.Visuals.Greetings.loop();
         this.Events.setup();
+        this.Visuals.DomainScroller.init(); 
     },
     reload() { window.location.reload(); },
     
@@ -373,6 +367,10 @@ const System = {
             const domMenu = document.querySelector('.dropdown');
             domTrig.addEventListener('click', (e) => {
                 e.stopPropagation();
+                if(System.Visuals.DomainScroller.isScrolling) {
+                    System.Visuals.DomainScroller.reset();
+                    return;
+                }
                 const isOpen = domMenu.style.display === 'block';
                 domMenu.style.display = isOpen ? 'none' : 'block';
                 domTrig.classList.toggle('active', !isOpen);
@@ -387,6 +385,7 @@ const System = {
                 item.classList.add('selected');
                 System.Store.domain = item.dataset.v;
                 document.getElementById('domain-display').innerText = "@" + System.Store.domain;
+                System.Visuals.DomainScroller.reset(); 
                 domMenu.style.display = 'none';
                 domTrig.classList.remove('active');
                 
@@ -548,19 +547,16 @@ const System = {
         }
     },
     
-    /* ⬇️ 这里优化了轮播逻辑，加入了 Welcome 作为闭环，彻底解决闪烁感 */
     Visuals: {
         Clock: { start() { setInterval(() => { const d = new Date(); document.getElementById('clock').innerText = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0'); }, 1000); } },
         Greetings: { 
             loop() { 
                 const words = ["你好", "Bonjour", "안녕하세요", "Hola", "こんにちは", "Ciao", "สวัสดีค่ะ", "Welcome"]; 
                 let i = 0; 
-                // 获取当前已存在的 span 元素
                 const textSpan = document.querySelector('.greeting-text');
                 
                 if (!textSpan) return;
 
-                // 监听 CSS 动画的循环事件：每次循环回到起点（文字透明时）触发
                 textSpan.addEventListener('animationiteration', () => {
                     textSpan.innerText = words[i];
                     i = (i + 1) % words.length;
@@ -582,6 +578,67 @@ const System = {
                 for(let i=0; i<200; i++) pieces.push({ x: cvs.width/2, y: cvs.height/2, w: Math.random()*8+4, h: Math.random()*8+4, c: colors[Math.floor(Math.random()*4)], vx: (Math.random()-.5)*20, vy: (Math.random()-.5)*20-5, age: 0 });
                 const render = () => { ctx.clearRect(0,0,cvs.width,cvs.height); let active = false; pieces.forEach(e => { if(e.age > 120) return; active = true; e.x += e.vx; e.y += e.vy; e.vy += 0.5; e.age++; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, e.w, e.h); }); if(active) requestAnimationFrame(render); else ctx.clearRect(0,0,cvs.width,cvs.height); }; render();
             } 
+        },
+        /* ⬇️ 这里加入了全新的防冲突定时自动滚动逻辑 */
+        DomainScroller: {
+            isScrolling: false,
+            timer: null,
+            autoTimer: null,
+            isHovered: false,
+            init() {
+                const trigger = document.getElementById('domain-trigger');
+                trigger.addEventListener('touchstart', () => { this.isHovered = true; this.start(); }, { passive: true });
+                trigger.addEventListener('mouseenter', () => { this.isHovered = true; this.start(); });
+                trigger.addEventListener('touchend', () => { this.isHovered = false; this.reset(); }, { passive: true });
+                trigger.addEventListener('mouseleave', () => { this.isHovered = false; this.reset(); });
+                
+                this.startAuto();
+            },
+            startAuto() {
+                // 每 8 秒自动触发一次滚动
+                this.autoTimer = setInterval(() => {
+                    const dropdown = document.querySelector('.dropdown');
+                    // 如果下拉菜单打开，或者用户正在悬停，则跳过此次自动滚动，防止打断操作
+                    if (this.isHovered || (dropdown && dropdown.style.display === 'block')) return;
+                    this.start();
+                }, 8000); 
+            },
+            start() {
+                if (this.isScrolling) return;
+                const container = document.querySelector('.domain-scroll-container');
+                const valEl = document.getElementById('domain-display');
+                
+                const containerWidth = container.offsetWidth;
+                const textWidth = valEl.offsetWidth;
+
+                if (textWidth > containerWidth) {
+                    this.isScrolling = true;
+                    const scrollDistance = textWidth - containerWidth;
+                    const duration = (scrollDistance / 100) * 1.5; 
+                    
+                    valEl.style.transition = `transform ${duration}s linear`;
+                    valEl.style.transform = `translateX(-${scrollDistance}px)`;
+
+                    this.timer = setTimeout(() => {
+                        // 滚动到底部后，如果用户没有按住/悬停，才自动复位
+                        if (!this.isHovered) {
+                            this.reset();
+                        }
+                    }, duration * 1000 + 2000);
+                }
+            },
+            reset() {
+                const valEl = document.getElementById('domain-display');
+                if(!valEl) return;
+                
+                clearTimeout(this.timer);
+                valEl.style.transition = 'transform 0.4s var(--ease-fluent)'; 
+                valEl.style.transform = 'translateX(0)';
+                
+                setTimeout(() => {
+                    this.isScrolling = false;
+                }, 400); 
+            }
         }
     }
 };
