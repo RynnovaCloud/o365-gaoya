@@ -16,7 +16,7 @@
             --theme-primary: #005a9e; 
             --theme-success: #107c10; 
             --theme-error: #c50f1f; 
-            --color-text-main: #242424; 
+            --color-text-main: #1b1b1b; 
             --color-text-sub: #616161; 
             --color-border: #e1dfdd; 
             --color-bg-app: #f0f2f5; 
@@ -75,9 +75,11 @@
         /* ==========================================================================
          * 3. 业务组件及 UI 样式
          * ========================================================================== */
-        h1 { margin: 0; height: 32px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
-        .greeting-text { display: block; animation: text-cycle 2.5s infinite var(--ease-fluent); }
-        @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(10px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-10px); filter: blur(4px); } }
+        /* ⬇️ 这里加粗并放大了标题，和 Elegent 保持一致 */
+        h1 { margin: 0; height: 40px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        /* ⬇️ 这里把动画时长改成了 3s，更从容 */
+        .greeting-text { display: block; animation: text-cycle 3s infinite var(--ease-fluent); }
+        @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(12px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-12px); filter: blur(4px); } }
         
         .form-row { margin-bottom: 24px; position: relative; }
         .label { display: block; font-size: 11px; font-weight: 700; color: var(--color-text-sub); margin-bottom: 8px; margin-left: 6px; text-transform: uppercase; }
@@ -97,18 +99,16 @@
         
         .combo-box { display: flex; width: 100%; height: 100%; gap: 8px; }
         .combo-input { flex: 1; min-width: 0; }
-        
-        /* --- 优化：域名下拉框及按钮样式（弹性适应长域名） --- */
-        .combo-select { flex: 0 1 auto; min-width: 80px; max-width: 65%; position: relative; }
+        .combo-select { flex: 0 0 auto; max-width: 55%; position: relative; }
         
         @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
-        .domain-btn { height: 100%; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: rgba(16, 124, 16, 0.06); border: 1px solid rgba(16, 124, 16, 0.15); border-radius: var(--radius-input); cursor: pointer; transition: all 0.3s var(--bezier-soft); white-space: nowrap; }
+        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
         .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
-        .domain-btn:hover { background: rgba(16, 124, 16, 0.12); border-color: var(--theme-success); }
+        .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; display: inline-block; vertical-align: middle; }
-        /* ------------------------------------------------ */
-
+        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); white-space: nowrap; overflow-x: auto; max-width: 120px; display: inline-block; vertical-align: middle; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .domain-val::-webkit-scrollbar { display: none; }
+        
         .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
         
@@ -200,7 +200,7 @@
                             </div>
                             <div class="combo-select" id="domain-trigger">
                                 <div class="domain-btn">
-                                    <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
+                                    <span class="domain-val" id="domain-display" title="向左滑动查看完整域名">@tuv.edu.kg</span>
                                     <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                                 </div>
                                 <div class="dropdown"></div>
@@ -295,9 +295,7 @@ const System = {
 
                 if (safeDomains.length > 0) {
                     this.Store.domain = safeDomains[0];
-                    const domDisplay = document.getElementById('domain-display');
-                    domDisplay.innerText = "@" + safeDomains[0];
-                    domDisplay.title = "@" + safeDomains[0]; // --- 优化：添加完整气泡提示 ---
+                    document.getElementById('domain-display').innerText = "@" + safeDomains[0];
                     
                     const dropdown = document.querySelector('.dropdown');
                     dropdown.innerHTML = safeDomains.map((d, i) => 
@@ -388,11 +386,7 @@ const System = {
                 document.querySelectorAll('.dd-item').forEach(i => i.classList.remove('selected'));
                 item.classList.add('selected');
                 System.Store.domain = item.dataset.v;
-                
-                const domDisplay = document.getElementById('domain-display');
-                domDisplay.innerText = "@" + System.Store.domain;
-                domDisplay.title = "@" + System.Store.domain; // --- 优化：切换下拉框时同步更新气泡提示 ---
-                
+                document.getElementById('domain-display').innerText = "@" + System.Store.domain;
                 domMenu.style.display = 'none';
                 domTrig.classList.remove('active');
                 
@@ -554,9 +548,20 @@ const System = {
         }
     },
     
+    /* ⬇️ 这里优化了轮播逻辑，加入了 Welcome 作为闭环，彻底解决闪烁感 */
     Visuals: {
         Clock: { start() { setInterval(() => { const d = new Date(); document.getElementById('clock').innerText = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0'); }, 1000); } },
-        Greetings: { loop() { const words = ["Hello", "你好", "Bonjour", "안녕하세요","Hola", "こんにちは","Ciao", "สวัสดีค่ะ"]; let i = 0; setInterval(() => { const el = document.getElementById('greeting-box'); i = (i + 1) % words.length; el.innerHTML = `<span class="greeting-text">${words[i]}</span>`; }, 2500); } },
+        Greetings: { 
+            loop() { 
+                const words = ["你好", "Bonjour", "안녕하세요", "Hola", "こんにちは", "Ciao", "สวัสดีค่ะ", "Welcome"]; 
+                let i = 0; 
+                setInterval(() => { 
+                    const el = document.getElementById('greeting-box'); 
+                    el.innerHTML = `<span class="greeting-text">${words[i]}</span>`; 
+                    i = (i + 1) % words.length; 
+                }, 3000); 
+            } 
+        },
         Particles: { 
             run() { 
                 const cvs = document.getElementById('particle-canvas'); const ctx = cvs.getContext('2d'); let w, h; const p = []; const mouse = { x: null, y: null };
