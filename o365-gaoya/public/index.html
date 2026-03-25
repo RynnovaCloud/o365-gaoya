@@ -74,7 +74,7 @@
         .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
 
         /* ==========================================================================
-         * 3. 业务组件及 UI 样式 (已融合 Elegent 影线与滚动)
+         * 3. 业务组件及 UI 样式
          * ========================================================================== */
         h1 { margin: 0; height: 40px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .greeting-text { display: block; animation: text-cycle 3s infinite var(--ease-fluent); }
@@ -103,8 +103,14 @@
         .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
         .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        .domain-scroll-container { display: inline-block; vertical-align: middle; max-width: 120px; overflow: hidden; white-space: nowrap; position: relative; }
-        .domain-val { display: inline-block; font-size: 13px; font-weight: 700; color: var(--theme-success); transition: transform 0.2s linear; }
+        /* ⬇️ 原生手势滑动支持，彻底去除 JS 滚动 */
+        .domain-val { 
+            font-size: 13px; font-weight: 700; color: var(--theme-success); 
+            white-space: nowrap; overflow-x: auto; max-width: 120px; 
+            display: inline-block; vertical-align: middle; 
+            scrollbar-width: none; -webkit-overflow-scrolling: touch; 
+        }
+        .domain-val::-webkit-scrollbar { display: none; }
         
         .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
@@ -191,9 +197,7 @@
                             </div>
                             <div class="combo-select" id="domain-trigger">
                                 <div class="domain-btn">
-                                    <div class="domain-scroll-container">
-                                        <span class="domain-val" id="domain-display">@tuv.edu.kg</span>
-                                    </div>
+                                    <span class="domain-val" id="domain-display" title="左右滑动查看完整域名">@tuv.edu.kg</span>
                                     <svg class="icon-chev" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
                                 </div>
                                 <div class="dropdown"></div>
@@ -309,7 +313,6 @@ const System = {
         this.Visuals.Clock.start();
         this.Visuals.Greetings.loop();
         this.Events.setup();
-        this.Visuals.DomainScroller.init(); 
     },
     reload() { window.location.reload(); },
     
@@ -367,10 +370,6 @@ const System = {
             const domMenu = document.querySelector('.dropdown');
             domTrig.addEventListener('click', (e) => {
                 e.stopPropagation();
-                if(System.Visuals.DomainScroller.isScrolling) {
-                    System.Visuals.DomainScroller.reset();
-                    return;
-                }
                 const isOpen = domMenu.style.display === 'block';
                 domMenu.style.display = isOpen ? 'none' : 'block';
                 domTrig.classList.toggle('active', !isOpen);
@@ -385,7 +384,6 @@ const System = {
                 item.classList.add('selected');
                 System.Store.domain = item.dataset.v;
                 document.getElementById('domain-display').innerText = "@" + System.Store.domain;
-                System.Visuals.DomainScroller.reset(); 
                 domMenu.style.display = 'none';
                 domTrig.classList.remove('active');
                 
@@ -578,48 +576,6 @@ const System = {
                 for(let i=0; i<200; i++) pieces.push({ x: cvs.width/2, y: cvs.height/2, w: Math.random()*8+4, h: Math.random()*8+4, c: colors[Math.floor(Math.random()*4)], vx: (Math.random()-.5)*20, vy: (Math.random()-.5)*20-5, age: 0 });
                 const render = () => { ctx.clearRect(0,0,cvs.width,cvs.height); let active = false; pieces.forEach(e => { if(e.age > 120) return; active = true; e.x += e.vx; e.y += e.vy; e.vy += 0.5; e.age++; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, e.w, e.h); }); if(active) requestAnimationFrame(render); else ctx.clearRect(0,0,cvs.width,cvs.height); }; render();
             } 
-        },
-        DomainScroller: {
-            isScrolling: false,
-            timer: null,
-            init() {
-                const trigger = document.getElementById('domain-trigger');
-                trigger.addEventListener('touchstart', () => this.start(), { passive: true });
-                trigger.addEventListener('mouseenter', () => this.start());
-                trigger.addEventListener('touchend', () => this.reset(), { passive: true });
-                trigger.addEventListener('mouseleave', () => this.reset());
-            },
-            start() {
-                if (this.isScrolling) return;
-                const container = document.querySelector('.domain-scroll-container');
-                const valEl = document.getElementById('domain-display');
-                
-                const containerWidth = container.offsetWidth;
-                const textWidth = valEl.offsetWidth;
-
-                if (textWidth > containerWidth) {
-                    this.isScrolling = true;
-                    const scrollDistance = textWidth - containerWidth;
-                    const duration = (scrollDistance / 100) * 1.5; 
-                    
-                    valEl.style.transition = `transform ${duration}s linear`;
-                    valEl.style.transform = `translateX(-${scrollDistance}px)`;
-
-                    this.timer = setTimeout(() => this.reset(), duration * 1000 + 2000);
-                }
-            },
-            reset() {
-                const valEl = document.getElementById('domain-display');
-                if(!valEl) return;
-                
-                clearTimeout(this.timer);
-                valEl.style.transition = 'transform 0.4s var(--ease-fluent)'; 
-                valEl.style.transform = 'translateX(0)';
-                
-                setTimeout(() => {
-                    this.isScrolling = false;
-                }, 400); 
-            }
         }
     }
 };
