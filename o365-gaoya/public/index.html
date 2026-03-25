@@ -75,9 +75,7 @@
         /* ==========================================================================
          * 3. 业务组件及 UI 样式
          * ========================================================================== */
-        /* ⬇️ 这里加粗并放大了标题，和 Elegent 保持一致 */
         h1 { margin: 0; height: 40px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        /* ⬇️ 这里把动画时长改成了 3s，更从容 */
         .greeting-text { display: block; animation: text-cycle 3s infinite var(--ease-fluent); }
         @keyframes text-cycle { 0%, 5% { opacity: 0; transform: translateY(12px); filter: blur(4px); } 15%, 85% { opacity: 1; transform: translateY(0); filter: blur(0); } 95%, 100% { opacity: 0; transform: translateY(-12px); filter: blur(4px); } }
         
@@ -97,17 +95,28 @@
         
         input { width: 100%; height: 100%; border: none !important; outline: none !important; background: transparent !important; padding: 0 16px; font-size: 15px; font-weight: 600; color: var(--color-text-main); font-family: inherit; }
         
+        /* === 域名组合框样式优化 (自适应宽度 + 保留摇晃动画 + 浅色底色) === */
         .combo-box { display: flex; width: 100%; height: 100%; gap: 8px; }
-        .combo-input { flex: 1; min-width: 0; }
-        .combo-select { flex: 0 0 auto; max-width: 55%; position: relative; }
+        .combo-input { flex: 1; min-width: 110px; } 
+        .combo-select { flex: 0 1 auto; max-width: calc(100% - 118px); position: relative; } 
         
         @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
         .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
         .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
         .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        .domain-val { font-size: 13px; font-weight: 700; color: var(--theme-success); white-space: nowrap; overflow-x: auto; max-width: 120px; display: inline-block; vertical-align: middle; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .domain-val { 
+            font-size: 13px; font-weight: 700; color: var(--theme-success); 
+            white-space: nowrap; overflow-x: auto; 
+            max-width: 100%; 
+            display: block; 
+            scrollbar-width: none; -webkit-overflow-scrolling: touch; 
+            touch-action: pan-x; 
+            cursor: grab; 
+        }
+        .domain-val:active { cursor: grabbing; }
         .domain-val::-webkit-scrollbar { display: none; }
+        /* === 结束 === */
         
         .icon-chev { width: 10px; fill: var(--theme-success); transition: 0.3s; flex-shrink: 0; }
         .combo-select.active .icon-chev { transform: rotate(180deg); fill: var(--theme-primary); }
@@ -369,10 +378,67 @@ const System = {
                 });
             });
 
+            // ==========================================
+            // 域名框滑动与点击逻辑（兼容手机触摸与PC鼠标拖拽）
+            // ==========================================
             const domTrig = document.getElementById('domain-trigger');
             const domMenu = document.querySelector('.dropdown');
+            const domainDisplay = document.getElementById('domain-display');
+
+            let isSliding = false; 
+            let startX = 0;
+            let scrollLeftInit = 0;
+            let isMouseDown = false;
+
+            // --- A. 手机端手指触摸事件监听 ---
+            domainDisplay.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].pageX;
+                isSliding = false; 
+            }, { passive: true });
+
+            domainDisplay.addEventListener('touchmove', (e) => {
+                const moveX = e.touches[0].pageX;
+                if (Math.abs(moveX - startX) > 5) {
+                    isSliding = true; 
+                }
+            }, { passive: true });
+
+            // --- B. PC端鼠标拖拽事件监听 ---
+            domainDisplay.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                isSliding = false;
+                startX = e.pageX;
+                scrollLeftInit = domainDisplay.scrollLeft;
+                domainDisplay.style.cursor = 'grabbing';
+            });
+
+            domainDisplay.addEventListener('mouseleave', () => { 
+                isMouseDown = false; 
+                domainDisplay.style.cursor = 'grab';
+            });
+            
+            window.addEventListener('mouseup', () => { 
+                isMouseDown = false; 
+                domainDisplay.style.cursor = 'grab';
+            });
+
+            domainDisplay.addEventListener('mousemove', (e) => {
+                if (!isMouseDown) return;
+                e.preventDefault(); 
+                const walk = (e.pageX - startX) * 1.5; 
+                domainDisplay.scrollLeft = scrollLeftInit - walk;
+                if (Math.abs(walk) > 5) isSliding = true; 
+            });
+
+            // --- C. 核心：点击菜单展开逻辑（带滑动防误触拦截） ---
             domTrig.addEventListener('click', (e) => {
                 e.stopPropagation();
+                
+                if (isSliding) {
+                    isSliding = false; 
+                    return; 
+                }
+
                 const isOpen = domMenu.style.display === 'block';
                 domMenu.style.display = isOpen ? 'none' : 'block';
                 domTrig.classList.toggle('active', !isOpen);
@@ -548,19 +614,16 @@ const System = {
         }
     },
     
-    /* ⬇️ 这里优化了轮播逻辑，加入了 Welcome 作为闭环，彻底解决闪烁感 */
     Visuals: {
         Clock: { start() { setInterval(() => { const d = new Date(); document.getElementById('clock').innerText = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0'); }, 1000); } },
-       Greetings: { 
+        Greetings: { 
             loop() { 
                 const words = ["你好", "Bonjour", "안녕하세요", "Hola", "こんにちは", "Ciao", "สวัสดีค่ะ", "Welcome"]; 
                 let i = 0; 
-                // 获取当前已存在的 span 元素
                 const textSpan = document.querySelector('.greeting-text');
                 
                 if (!textSpan) return;
 
-                // 监听 CSS 动画的循环事件：每次循环回到起点（文字透明时）触发
                 textSpan.addEventListener('animationiteration', () => {
                     textSpan.innerText = words[i];
                     i = (i + 1) % words.length;
