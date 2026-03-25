@@ -555,11 +555,16 @@ const System = {
             loop() { 
                 const words = ["你好", "Bonjour", "안녕하세요", "Hola", "こんにちは", "Ciao", "สวัสดีค่ะ", "Welcome"]; 
                 let i = 0; 
-                setInterval(() => { 
-                    const el = document.getElementById('greeting-box'); 
-                    el.innerHTML = `<span class="greeting-text">${words[i]}</span>`; 
-                    i = (i + 1) % words.length; 
-                }, 3000); 
+                // 获取当前已存在的 span 元素
+                const textSpan = document.querySelector('.greeting-text');
+                
+                if (!textSpan) return;
+
+                // 监听 CSS 动画的循环事件：每次循环回到起点（文字透明时）触发
+                textSpan.addEventListener('animationiteration', () => {
+                    textSpan.innerText = words[i];
+                    i = (i + 1) % words.length;
+                });
             } 
         },
         Particles: { 
