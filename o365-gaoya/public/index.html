@@ -74,7 +74,7 @@
         .t-r { background: var(--brand-red); } .t-g { background: var(--brand-green); } .t-b { background: var(--brand-blue); } .t-y { background: var(--brand-yellow); }
 
         /* ==========================================================================
-         * 3. 业务组件及 UI 样式
+         * 3. 业务组件及 UI 样式 (已融合 Elegent 影线与滚动)
          * ========================================================================== */
         h1 { margin: 0; height: 40px; overflow: hidden; position: relative; color: var(--color-text-main); font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .greeting-text { display: block; animation: text-cycle 3s infinite var(--ease-fluent); }
@@ -579,29 +579,15 @@ const System = {
                 const render = () => { ctx.clearRect(0,0,cvs.width,cvs.height); let active = false; pieces.forEach(e => { if(e.age > 120) return; active = true; e.x += e.vx; e.y += e.vy; e.vy += 0.5; e.age++; ctx.fillStyle = e.c; ctx.fillRect(e.x, e.y, e.w, e.h); }); if(active) requestAnimationFrame(render); else ctx.clearRect(0,0,cvs.width,cvs.height); }; render();
             } 
         },
-        /* ⬇️ 这里加入了全新的防冲突定时自动滚动逻辑 */
         DomainScroller: {
             isScrolling: false,
             timer: null,
-            autoTimer: null,
-            isHovered: false,
             init() {
                 const trigger = document.getElementById('domain-trigger');
-                trigger.addEventListener('touchstart', () => { this.isHovered = true; this.start(); }, { passive: true });
-                trigger.addEventListener('mouseenter', () => { this.isHovered = true; this.start(); });
-                trigger.addEventListener('touchend', () => { this.isHovered = false; this.reset(); }, { passive: true });
-                trigger.addEventListener('mouseleave', () => { this.isHovered = false; this.reset(); });
-                
-                this.startAuto();
-            },
-            startAuto() {
-                // 每 8 秒自动触发一次滚动
-                this.autoTimer = setInterval(() => {
-                    const dropdown = document.querySelector('.dropdown');
-                    // 如果下拉菜单打开，或者用户正在悬停，则跳过此次自动滚动，防止打断操作
-                    if (this.isHovered || (dropdown && dropdown.style.display === 'block')) return;
-                    this.start();
-                }, 8000); 
+                trigger.addEventListener('touchstart', () => this.start(), { passive: true });
+                trigger.addEventListener('mouseenter', () => this.start());
+                trigger.addEventListener('touchend', () => this.reset(), { passive: true });
+                trigger.addEventListener('mouseleave', () => this.reset());
             },
             start() {
                 if (this.isScrolling) return;
@@ -619,12 +605,7 @@ const System = {
                     valEl.style.transition = `transform ${duration}s linear`;
                     valEl.style.transform = `translateX(-${scrollDistance}px)`;
 
-                    this.timer = setTimeout(() => {
-                        // 滚动到底部后，如果用户没有按住/悬停，才自动复位
-                        if (!this.isHovered) {
-                            this.reset();
-                        }
-                    }, duration * 1000 + 2000);
+                    this.timer = setTimeout(() => this.reset(), duration * 1000 + 2000);
                 }
             },
             reset() {
