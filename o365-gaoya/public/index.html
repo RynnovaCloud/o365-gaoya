@@ -101,15 +101,22 @@
         .combo-select { flex: 0 1 auto; max-width: calc(100% - 118px); position: relative; } 
         
         @keyframes hint-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px); } }
-        .domain-btn { height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; }
+        .domain-btn { 
+            height: 100%; display: flex; align-items: center; gap: 8px; padding: 0 15px; 
+            background: rgba(16, 124, 16, 0.08); border: 1px solid rgba(16, 124, 16, 0.2); 
+            border-radius: var(--radius-input); cursor: pointer; transition: 0.3s; 
+            max-width: 100%; /* 确保按钮能够自适应外层最大宽度 */
+            overflow: hidden; 
+        }
         .combo-box:not(:focus-within) .domain-btn { animation: hint-slide 2.5s ease-in-out infinite; }
         .domain-btn:hover { background: rgba(16, 124, 16, 0.15); }
         
-        /* ⬇️ 增强版滚动容器（承载手动滑动逻辑） */
+        /* ⬇️ 增强版滚动容器：不写死宽度，用 flex:1 完美自适应 */
         .domain-scroll-container {
-            display: inline-block;
-            vertical-align: middle;
-            max-width: 120px;
+            flex: 1; /* 撑满剩余空间 */
+            min-width: 0; /* 允许 flex 子元素收缩，这是自适应的关键 */
+            display: flex;
+            align-items: center;
             overflow: hidden; /* 隐藏超出部分及滚动条 */
             white-space: nowrap;
             position: relative;
@@ -121,9 +128,10 @@
         .domain-scroll-container:active { cursor: grabbing; }
         .domain-scroll-container::-webkit-scrollbar { display: none; }
 
-        /* ⬇️ 增强版域名文本（承载自动动效逻辑） */
+        /* ⬇️ 域名文本：严禁收缩，确保能够正确计算出真实长度触发动画 */
         .domain-val { 
             display: inline-block;
+            flex-shrink: 0; /* 关键：防止文本被压缩，保证 offsetWidth 取到真实宽度 */
             font-size: 13px; 
             font-weight: 700; 
             color: var(--theme-success); 
@@ -300,7 +308,8 @@
 
 <script>
 const System = {
-    Store: { domain: "tuv.edu.kg", isBusy: false },
+    // ⬇️ 新增 isDragging 状态，防止手动拖拽和自动动画冲突
+    Store: { domain: "tuv.edu.kg", isBusy: false, isDragging: false },
 
     async init() {
         try {
@@ -340,7 +349,7 @@ const System = {
         this.Visuals.Clock.start();
         this.Visuals.Greetings.loop();
         this.Events.setup();
-        // ⬇️ 初始化增强的域名滚动监听器
+        // ⬇️ 初始化悬浮自动滚动监听
         this.Visuals.DomainScroller.init(); 
     },
     reload() { window.location.reload(); },
@@ -400,8 +409,6 @@ const System = {
             // ==========================================
             const domTrig = document.getElementById('domain-trigger');
             const domMenu = document.querySelector('.dropdown');
-            
-            // ⬇️ 将原有手动拖拽逻辑挂载到新的外部容器上，以与内部transform动效并存
             const domainContainer = document.getElementById('domain-scroll-container');
 
             let isSliding = false; 
@@ -411,19 +418,29 @@ const System = {
 
             // --- A. 手机端手指触摸事件监听 ---
             domainContainer.addEventListener('touchstart', (e) => {
+                System.Store.isDragging = true;
+                System.Visuals.DomainScroller.reset(); // 如果正在自动滚动，立刻停止
                 startX = e.touches[0].pageX;
+                scrollLeftInit = domainContainer.scrollLeft;
                 isSliding = false; 
             }, { passive: true });
 
             domainContainer.addEventListener('touchmove', (e) => {
+                if (!System.Store.isDragging) return;
                 const moveX = e.touches[0].pageX;
-                if (Math.abs(moveX - startX) > 5) {
-                    isSliding = true; 
-                }
+                const walk = (moveX - startX) * 1.5;
+                domainContainer.scrollLeft = scrollLeftInit - walk;
+                if (Math.abs(walk) > 5) isSliding = true; 
+            }, { passive: true });
+            
+            domainContainer.addEventListener('touchend', () => {
+                System.Store.isDragging = false;
             }, { passive: true });
 
             // --- B. PC端鼠标拖拽事件监听 ---
             domainContainer.addEventListener('mousedown', (e) => {
+                System.Store.isDragging = true;
+                System.Visuals.DomainScroller.reset(); // 如果正在自动滚动，立刻停止
                 isMouseDown = true;
                 isSliding = false;
                 startX = e.pageX;
@@ -432,11 +449,13 @@ const System = {
             });
 
             domainContainer.addEventListener('mouseleave', () => { 
+                System.Store.isDragging = false;
                 isMouseDown = false; 
                 domainContainer.style.cursor = 'grab';
             });
             
             window.addEventListener('mouseup', () => { 
+                System.Store.isDragging = false;
                 isMouseDown = false; 
                 domainContainer.style.cursor = 'grab';
             });
@@ -449,15 +468,19 @@ const System = {
                 if (Math.abs(walk) > 5) isSliding = true; 
             });
 
-            // --- C. 核心：点击菜单展开逻辑（带滑动防误触拦截） ---
+            // --- C. 核心：点击菜单展开逻辑 ---
             domTrig.addEventListener('click', (e) => {
                 e.stopPropagation();
                 
-                // ⬇️ 如果用户正在手动滑动 或者 系统正在播放自动滚动动效，则不展开下拉菜单
-                if (isSliding || System.Visuals.DomainScroller.isScrolling) {
+                // 【拦截逻辑修复】如果是手动拖拽结束触发的 click，则拦截，防止误开菜单
+                if (isSliding) {
                     isSliding = false; 
-                    System.Visuals.DomainScroller.reset(); // 复位自动滚动状态
                     return; 
+                }
+
+                // 【顺畅逻辑修复】如果是正在自动滚动，只需停止动画，不拦截点击（允许菜单正常打开）
+                if (System.Visuals.DomainScroller.isScrolling) {
+                    System.Visuals.DomainScroller.reset(); 
                 }
 
                 const isOpen = domMenu.style.display === 'block';
@@ -475,7 +498,7 @@ const System = {
                 System.Store.domain = item.dataset.v;
                 document.getElementById('domain-display').innerText = "@" + System.Store.domain;
                 
-                // ⬇️ 切换域名后，重置所有的滚动状态(手动+自动)
+                // ⬇️ 切换域名后，重置所有的滚动状态
                 System.Visuals.DomainScroller.reset(); 
                 document.getElementById('domain-scroll-container').scrollLeft = 0;
                 
@@ -673,32 +696,36 @@ const System = {
             } 
         },
         
-        // ⬇️ 新增的自动平滑滚动器模块
+        // ⬇️ 完美的自动平滑滚动器模块
         DomainScroller: {
             isScrolling: false,
             timer: null,
             init() {
                 const trigger = document.getElementById('domain-trigger');
-                trigger.addEventListener('touchstart', () => this.start(), { passive: true });
+                // 仅监听鼠标事件进行自动滚动，手机端直接交由原生/模拟手势拖拽
                 trigger.addEventListener('mouseenter', () => this.start());
-                trigger.addEventListener('touchend', () => this.reset(), { passive: true });
                 trigger.addEventListener('mouseleave', () => this.reset());
             },
             start() {
-                if (this.isScrolling) return;
+                // 如果已经在动画中，或者用户正在手动拖拽，则不触发自动滚动
+                if (this.isScrolling || System.Store.isDragging) return;
+                
                 const container = document.getElementById('domain-scroll-container');
                 const valEl = document.getElementById('domain-display');
                 
                 const containerWidth = container.offsetWidth;
                 const textWidth = valEl.offsetWidth;
 
-                // 只有当文本长度超过容器长度时才触发自动动效滚动
+                // 【核心逻辑】：由于取消了固定宽度，只有当真实文本长度 大于 自适应后的容器宽度 时，才会触发动画
                 if (textWidth > containerWidth) {
                     this.isScrolling = true;
                     const scrollDistance = textWidth - containerWidth;
-                    // 根据溢出长度动态计算时间，保证速度恒定优雅 (每100px约走1.5秒)
+                    // 根据溢出长度动态计算平滑的滚动时间
                     const duration = (scrollDistance / 100) * 1.5; 
                     
+                    // 动画开始前，确保 manual scrollLeft 归零
+                    container.scrollLeft = 0;
+
                     valEl.style.transition = `transform ${duration}s linear`;
                     valEl.style.transform = `translateX(-${scrollDistance}px)`;
 
