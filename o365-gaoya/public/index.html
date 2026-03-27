@@ -47,7 +47,8 @@
         .app-shell { position: relative; z-index: 10; width: 92%; max-width: 460px; height: auto; max-height: 92dvh; background: var(--color-surface); backdrop-filter: var(--backdrop-blur); -webkit-backdrop-filter: var(--backdrop-blur); border: 1px solid rgba(255,255,255,0.8); border-radius: var(--radius-card); box-shadow: var(--shadow-card); display: flex; flex-direction: column; animation: shell-entrance 0.8s var(--ease-fluent); }
         @keyframes shell-entrance { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
-        .app-content { flex: 1; overflow-y: auto; padding: 40px 32px 20px 32px; scrollbar-width: none; }
+        /* ⬇️ 去掉了底部的 20px padding，交给吸底容器 */
+        .app-content { flex: 1; overflow-y: auto; padding: 40px 32px 0 32px; scrollbar-width: none; position: relative; }
         .app-content::-webkit-scrollbar { display: none; }
         
         .app-footer { flex-shrink: 0; padding: 16px 24px; background: rgba(250, 250, 250, 0.8); border-top: 1px solid rgba(0,0,0,0.05); border-radius: 0 0 var(--radius-card) var(--radius-card); display: flex; justify-content: space-between; align-items: center; }
@@ -160,13 +161,25 @@
         .error-hint.show { max-height: 40px; opacity: 1; margin-top: 8px; margin-bottom: 4px; }
         .error-hint svg { width: 14px; fill: currentColor; flex-shrink: 0; margin-top: 1px; }
         
-        .btn-primary { width: 100%; height: 58px; margin-top: 24px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; cursor: not-allowed; transition: all 0.4s var(--ease-fluent); display: flex; justify-content: center; align-items: center; gap: 8px; overflow: hidden; position: relative; opacity: 0.8; }
+        /* 吸底容器与平滑渐变效果 */
+        .action-bar {
+            position: sticky;
+            bottom: 0;
+            padding: 16px 0 24px 0;
+            background: var(--color-surface);
+            box-shadow: 0 -16px 20px var(--color-surface);
+            z-index: 90;
+        }
+
+        /* 移除了原有的 margin-top: 24px，交由 action-bar 控制间距 */
+        .btn-primary { width: 100%; height: 58px; background: #9ba1a6; color: #fff; border: none; border-radius: var(--radius-btn); font-size: 16px; font-weight: 600; letter-spacing: 0.3px; cursor: not-allowed; transition: all 0.4s var(--ease-fluent); display: flex; justify-content: center; align-items: center; gap: 8px; overflow: hidden; position: relative; opacity: 0.8; }
         .btn-primary.ready { background: var(--theme-success); box-shadow: 0 10px 20px rgba(16, 124, 16, 0.25); cursor: pointer; opacity: 1; }
         .btn-primary.ready:hover { transform: translateY(-2px); background: #0e6f0e; }
         .btn-primary.ready:active { transform: scale(0.98); }
         .btn-primary:disabled { cursor: wait; opacity: 0.7; box-shadow: none; }
         
-        #view-success { display: none; flex-direction: column; align-items: center; padding-top: 10px; animation: view-enter 0.5s; }
+        /* 为 success 视图也补上底部 padding */
+        #view-success { display: none; flex-direction: column; align-items: center; padding-top: 10px; padding-bottom: 24px; animation: view-enter 0.5s; }
         @keyframes view-enter { from { opacity: 0; } to { opacity: 1; } }
         .success-icon { font-size: 56px; margin-bottom: 16px; animation: pop 0.6s var(--ease-bounce); }
         @keyframes pop { 0%{transform:scale(0)} 80%{transform:scale(1.1)} 100%{transform:scale(1)} }
@@ -209,7 +222,7 @@
                 <h1 id="greeting-box"><span class="greeting-text">Welcome</span></h1>
             </div>
 
-            <div id="view-form">
+            <div id="view-form" style="display: flex; flex-direction: column; min-height: calc(100% - 100px);">
                 <div class="form-row">
                     <label class="label">Display Name</label>
                     <div class="input-box" id="wrap-dn">
@@ -269,9 +282,13 @@
                     </div>
                 </div>
 
-                <button class="btn-primary" id="btn-submit" onclick="System.Actions.process()">
-                    <span id="btn-txt">Initialize Identity</span>
-                </button>
+                <div style="flex-grow: 1;"></div>
+
+                <div class="action-bar">
+                    <button class="btn-primary" id="btn-submit" onclick="System.Actions.process()">
+                        <span id="btn-txt">Initialize Identity</span>
+                    </button>
+                </div>
             </div>
 
             <div id="view-success">
@@ -293,7 +310,7 @@
                         </div>
                     </div>
                 </div>
-                <button class="btn-primary ready" onclick="window.location.href='https://office.com'">Sign in to Portal</button>
+                <button class="btn-primary ready" onclick="window.location.href='https://office.com'" style="margin-top: auto;">Sign in to Portal</button>
             </div>
         </div>
 
@@ -366,6 +383,16 @@ const System = {
             
             fields.forEach(key => {
                 const inputEl = document.getElementById('in-' + key);
+                
+                // ==========================================
+                // 💡 修复软键盘遮挡：获取焦点时平滑滚动到可视区域中央
+                // ==========================================
+                inputEl.addEventListener('focus', function() {
+                    setTimeout(() => {
+                        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 300);
+                });
+                // ==========================================
                 
                 inputEl.addEventListener('input', () => {
                     const val = inputEl.value.trim();
@@ -702,42 +729,33 @@ const System = {
             } 
         },
         
-        // ⬇️ 彻底优化的平滑自动滚动器
+        // 彻底优化的平滑自动滚动器
         DomainScroller: {
             isScrolling: false,
             timer: null,
             init() {
-                // 将监听目标上移到外层触发器，避免子元素影响鼠标事件判定
                 const trigger = document.getElementById('domain-trigger');
                 trigger.addEventListener('mouseenter', () => this.start());
                 trigger.addEventListener('mouseleave', () => this.reset());
             },
             start() {
-                // 如果动画在执行，或是用户正在手动拖拽，跳过
                 if (this.isScrolling || System.Store.isDragging) return;
                 
                 const container = document.getElementById('domain-scroll-container');
                 const valEl = document.getElementById('domain-display');
                 
-                // 【核心修复】：获取容器的真实视口宽度 vs 内部文字的完全伸展宽度
                 const containerWidth = container.clientWidth;
                 const textWidth = valEl.scrollWidth;
 
                 if (textWidth > containerWidth) {
                     this.isScrolling = true;
-                    // 计算出溢出需要滑动的距离，加上12px的尾部留白缓冲
                     const scrollDistance = textWidth - containerWidth + 12; 
-                    
-                    // 根据距离计算出平稳均匀的时间 (约每秒滚动 40px 速度最佳)
                     const duration = scrollDistance / 40; 
                     
-                    // 动画开始前，确保 manual scrollLeft 归零
                     container.scrollLeft = 0;
-
                     valEl.style.transition = `transform ${duration}s linear`;
                     valEl.style.transform = `translateX(-${scrollDistance}px)`;
 
-                    // 滚动到底部后静止一会儿，然后自动复位
                     this.timer = setTimeout(() => this.reset(), duration * 1000 + 1500);
                 }
             },
@@ -749,7 +767,6 @@ const System = {
                 valEl.style.transition = 'transform 0.4s var(--ease-fluent)'; 
                 valEl.style.transform = 'translateX(0)';
                 
-                // 动画结束后释放锁定标记
                 setTimeout(() => {
                     this.isScrolling = false;
                 }, 400); 
